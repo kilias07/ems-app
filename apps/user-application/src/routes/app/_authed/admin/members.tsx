@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { trpc } from "@/router";
-import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   Table,
@@ -20,6 +20,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -33,14 +40,34 @@ export const Route = createFileRoute("/app/_authed/admin/members")({
   component: MembersPage,
 });
 
+const ROLE_LABELS: Record<string, string> = {
+  user: "User",
+  trainer: "Trainer",
+  admin: "Admin",
+};
+
+const ROLE_VARIANTS: Record<string, "default" | "secondary" | "outline"> = {
+  admin: "default",
+  trainer: "secondary",
+  user: "outline",
+};
+
 function MembersPage() {
   const queryClient = useQueryClient();
   const { data: members } = useSuspenseQuery(
     trpc.admin.listMembers.queryOptions(),
   );
+  const { data: myProfile } = useQuery(trpc.profile.getMyProfile.queryOptions());
+
+  const isAdmin = myProfile?.role === "admin";
 
   const [newNickname, setNewNickname] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({
+      queryKey: trpc.admin.listMembers.queryKey(),
+    });
 
   const createMember = useMutation(
     trpc.admin.createMember.mutationOptions({
@@ -48,9 +75,7 @@ function MembersPage() {
         toast.success("Member created");
         setNewNickname("");
         setDialogOpen(false);
-        queryClient.invalidateQueries({
-          queryKey: trpc.admin.listMembers.queryKey(),
-        });
+        invalidate();
       },
       onError: (err) => toast.error(err.message),
     }),
@@ -58,11 +83,14 @@ function MembersPage() {
 
   const setActive = useMutation(
     trpc.admin.setMemberActive.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.admin.listMembers.queryKey(),
-        });
-      },
+      onSuccess: invalidate,
+      onError: (err) => toast.error(err.message),
+    }),
+  );
+
+  const setRole = useMutation(
+    trpc.admin.setMemberRole.mutationOptions({
+      onSuccess: invalidate,
       onError: (err) => toast.error(err.message),
     }),
   );
@@ -113,7 +141,7 @@ function MembersPage() {
             <TableRow>
               <TableHead>Nickname</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Profile</TableHead>
               <TableHead>Joined</TableHead>
               <TableHead className="text-right">Active</TableHead>
             </TableRow>
@@ -129,11 +157,27 @@ function MembersPage() {
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant={member.role === "admin" ? "default" : "secondary"}
-                  >
-                    {member.role}
-                  </Badge>
+                  {isAdmin ? (
+                    <Select
+                      value={member.role}
+                      onValueChange={(role) =>
+                        setRole.mutate({ memberId: member.id, role: role as "user" | "trainer" | "admin" })
+                      }
+                    >
+                      <SelectTrigger className="h-7 w-28 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="trainer">Trainer</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge variant={ROLE_VARIANTS[member.role] ?? "outline"}>
+                      {ROLE_LABELS[member.role] ?? member.role}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge

@@ -11,7 +11,7 @@ export const Route = createFileRoute("/app/_authed/admin")({
       const profile = await context.queryClient.fetchQuery(
         context.trpc.profile.getMyProfile.queryOptions(),
       );
-      if (profile.role !== "admin") {
+      if (profile.role !== "trainer" && profile.role !== "admin") {
         throw redirect({ to: "/app" });
       }
     } catch (err) {

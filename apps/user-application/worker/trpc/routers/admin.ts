@@ -1,4 +1,4 @@
-import { adminProcedure, t } from "@/worker/trpc/trpc-instance";
+import { adminProcedure, trainerProcedure, t } from "@/worker/trpc/trpc-instance";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 const genId = () => crypto.randomUUID();
@@ -6,6 +6,7 @@ import {
   getAllMembers,
   createMemberProfile,
   setMemberActive,
+  setMemberRole,
   getMemberByNickname,
 } from "@repo/data-ops/queries/members";
 import {
@@ -19,11 +20,13 @@ import { SUIT_MULTIPLIERS } from "@repo/data-ops/utils/suit-multipliers";
 const suitSizeSchema = z.enum(["R0", "R1", "RW2", "R2", "R3", "R4", "R5"]);
 
 export const adminRoutes = t.router({
-  listMembers: adminProcedure.query(async () => {
+  // ── Trainer + Admin ───────────────────────────────────────────────────────
+
+  listMembers: trainerProcedure.query(async () => {
     return getAllMembers();
   }),
 
-  logSession: adminProcedure
+  logSession: trainerProcedure
     .input(
       z.object({
         memberId: z.string(),
@@ -51,14 +54,14 @@ export const adminRoutes = t.router({
       return { correctedPoints };
     }),
 
-  deleteSession: adminProcedure
+  deleteSession: trainerProcedure
     .input(z.object({ sessionId: z.string() }))
     .mutation(async ({ input }) => {
       await deleteSession(input.sessionId);
       return { success: true };
     }),
 
-  getMemberSessions: adminProcedure
+  getMemberSessions: trainerProcedure
     .input(
       z.object({
         memberId: z.string(),
@@ -69,7 +72,7 @@ export const adminRoutes = t.router({
       return getSessionsByMember(input.memberId, { page: input.page });
     }),
 
-  createMember: adminProcedure
+  createMember: trainerProcedure
     .input(z.object({ nickname: z.string().min(2).max(30) }))
     .mutation(async ({ input }) => {
       const existing = await getMemberByNickname(input.nickname);
@@ -80,18 +83,28 @@ export const adminRoutes = t.router({
         });
       }
       const id = genId();
-      await createMemberProfile({
-        id,
-        nickname: input.nickname,
-        role: "member",
-      });
+      await createMemberProfile({ id, nickname: input.nickname, role: "user" });
       return { id };
     }),
 
-  setMemberActive: adminProcedure
+  setMemberActive: trainerProcedure
     .input(z.object({ memberId: z.string(), active: z.boolean() }))
     .mutation(async ({ input }) => {
       await setMemberActive(input.memberId, input.active);
+      return { success: true };
+    }),
+
+  // ── Admin only ────────────────────────────────────────────────────────────
+
+  setMemberRole: adminProcedure
+    .input(
+      z.object({
+        memberId: z.string(),
+        role: z.enum(["user", "trainer", "admin"]),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await setMemberRole(input.memberId, input.role);
       return { success: true };
     }),
 

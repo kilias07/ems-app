@@ -37,7 +37,7 @@ export async function createMemberProfile(data: {
   await db.insert(memberProfile).values({
     id: data.id,
     nickname: data.nickname ?? null,
-    role: data.role ?? "member",
+    role: data.role ?? "user",
     avatarUrl: data.avatarUrl ?? null,
   });
 }
@@ -55,5 +55,13 @@ export async function setMemberActive(id: string, active: boolean) {
   await db
     .update(memberProfile)
     .set({ isActive: active ? 1 : 0 })
+    .where(eq(memberProfile.id, id));
+}
+
+export async function setMemberRole(id: string, role: string) {
+  const db = getDb();
+  await db
+    .update(memberProfile)
+    .set({ role })
     .where(eq(memberProfile.id, id));
 }

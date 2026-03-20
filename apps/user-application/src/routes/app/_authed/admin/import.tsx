@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { trpc } from "@/router";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
@@ -27,6 +27,12 @@ import { SUIT_MULTIPLIERS } from "@repo/data-ops/utils/suit-multipliers";
 import { AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/app/_authed/admin/import")({
+  beforeLoad: async ({ context }) => {
+    const profile = await context.queryClient.fetchQuery(
+      context.trpc.profile.getMyProfile.queryOptions(),
+    );
+    if (profile.role !== "admin") throw redirect({ to: "/app/admin" });
+  },
   loader: async ({ context }) => {
     await context.queryClient.prefetchQuery(
       context.trpc.admin.listMembers.queryOptions(),

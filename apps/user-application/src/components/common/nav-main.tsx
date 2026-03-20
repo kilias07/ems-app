@@ -34,11 +34,18 @@ export function NavMain() {
     { title: "Leaderboard", to: "/app/leaderboard", icon: IconTrophy },
   ];
 
-  const adminItems = [
+  const trainerItems = [
     { title: "Log Session", to: "/app/admin/log-session", icon: IconPlus },
     { title: "Members", to: "/app/admin/members", icon: IconUsers },
+  ];
+
+  const adminItems = [
     { title: "Import Data", to: "/app/admin/import", icon: IconFileImport },
   ];
+
+  const isTrainerOrAdmin =
+    profile?.role === "trainer" || profile?.role === "admin";
+  const isAdmin = profile?.role === "admin";
 
   return (
     <>
@@ -61,7 +68,29 @@ export function NavMain() {
         </SidebarGroupContent>
       </SidebarGroup>
 
-      {profile?.role === "admin" && (
+      {isTrainerOrAdmin && (
+        <SidebarGroup>
+          <SidebarGroupLabel>Trainer</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {trainerItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    onClick={() => nav({ to: item.to })}
+                    tooltip={item.title}
+                    isActive={isActive(item.to)}
+                  >
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
+
+      {isAdmin && (
         <SidebarGroup>
           <SidebarGroupLabel>Admin</SidebarGroupLabel>
           <SidebarGroupContent>
