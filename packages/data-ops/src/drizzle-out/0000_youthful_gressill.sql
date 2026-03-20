@@ -1,39 +1,14 @@
--- Current sql file was generated after introspecting the database
--- If you want to run this migration please uncomment this code before executing migrations
-/*
-CREATE TABLE `links` (
-	`link_id` text PRIMARY KEY NOT NULL,
-	`account_id` text NOT NULL,
-	`destinations` numeric NOT NULL,
-	`created` numeric DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	`updated` numeric DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	`name` text NOT NULL
+CREATE TABLE `user` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`email` text NOT NULL,
+	`email_verified` integer NOT NULL,
+	`image` text,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	`stripe_customer_id` text
 );
 --> statement-breakpoint
-CREATE TABLE `link_clicks` (
-	`id` text NOT NULL,
-	`account_id` text NOT NULL,
-	`country` text,
-	`destination` text NOT NULL,
-	`clicked_time` numeric NOT NULL,
-	`latitude` real,
-	`longitude` real
-);
---> statement-breakpoint
-CREATE INDEX `idx_link_clicks_account_id` ON `link_clicks` (`account_id`);--> statement-breakpoint
-CREATE INDEX `idx_link_clicks_clicked_time` ON `link_clicks` (`clicked_time`);--> statement-breakpoint
-CREATE INDEX `idx_link_clicks_id` ON `link_clicks` (`id`);--> statement-breakpoint
-CREATE TABLE `destination_evaluations` (
-	`id` text PRIMARY KEY,
-	`link_id` text NOT NULL,
-	`account_id` text NOT NULL,
-	`destination_url` text NOT NULL,
-	`status` text NOT NULL,
-	`reason` text NOT NULL,
-	`created_at` numeric DEFAULT (CURRENT_TIMESTAMP) NOT NULL
-);
---> statement-breakpoint
-CREATE INDEX `idx_destination_evaluations_account_time` ON `destination_evaluations` (`account_id`,`created_at`);--> statement-breakpoint
 CREATE TABLE `account` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,
@@ -63,7 +38,8 @@ CREATE TABLE `session` (
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `session_token_unique` ON `session` (`token`);--> statement-breakpoint
+CREATE UNIQUE INDEX `session_token_unique` ON `session` (`token`);
+--> statement-breakpoint
 CREATE TABLE `verification` (
 	`id` text PRIMARY KEY NOT NULL,
 	`identifier` text NOT NULL,
@@ -71,17 +47,6 @@ CREATE TABLE `verification` (
 	`expires_at` integer NOT NULL,
 	`created_at` integer,
 	`updated_at` integer
-);
---> statement-breakpoint
-CREATE TABLE `user` (
-	`id` text PRIMARY KEY NOT NULL,
-	`name` text NOT NULL,
-	`email` text NOT NULL,
-	`email_verified` integer NOT NULL,
-	`image` text,
-	`created_at` integer NOT NULL,
-	`updated_at` integer NOT NULL,
-	`stripe_customer_id` text
 );
 --> statement-breakpoint
 CREATE TABLE `subscription` (
@@ -96,5 +61,3 @@ CREATE TABLE `subscription` (
 	`cancel_at_period_end` integer,
 	`seats` integer
 );
-
-*/
