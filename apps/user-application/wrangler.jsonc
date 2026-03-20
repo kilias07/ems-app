@@ -1,7 +1,3 @@
-/**
- * For more details on how to configure Wrangler, refer to:
- * https://developers.cloudflare.com/workers/wrangler/configuration/
- */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "user-application",
@@ -10,24 +6,18 @@
   "assets": {
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/auth/*", "/trpc/*", "/click-socket"],
+    "run_worker_first": ["/api/auth/*", "/trpc/*"]
   },
 
   "observability": {
-    "enabled": true,
+    "enabled": true
   },
   "d1_databases": [
     {
       "binding": "DB",
+      "database_name": "ems-studio-db",
       "database_id": "65409933-f910-4bab-8c45-469b94f2eb90",
-      "remote": true,
-    },
-  ],
-  "services": [
-    {
-      "binding": "BACKEND_SERVICE",
-      "service": "data-service",
-      "remote": true,
-    },
-  ],
+      "migrations_dir": "../../packages/data-ops/src/drizzle-out"
+    }
+  ]
 }

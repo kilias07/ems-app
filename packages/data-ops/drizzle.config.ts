@@ -1,6 +1,7 @@
 import type { Config } from "drizzle-kit";
 
 const config: Config = {
+  schema: "./src/db/ems-schema.ts",
   out: "./src/drizzle-out",
   dialect: "sqlite",
   driver: "d1-http",
@@ -9,7 +10,7 @@ const config: Config = {
     databaseId: process.env.CLOUDFLARE_DATABASE_ID!,
     token: process.env.CLOUDFLARE_D1_TOKEN!,
   },
-  tablesFilter: ["!_cf_KV"],
+  tablesFilter: ["member_profile", "training_session"],
 };
 
 export default config satisfies Config;

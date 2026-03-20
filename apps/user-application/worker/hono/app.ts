@@ -11,30 +11,10 @@ export const App = new Hono<{
 }>();
 
 const getAuthInstance = (env: Env) => {
-  return getAuth(
-    {
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
-    },
-    {
-      stripeWebhookSecret: "",
-      stripeApiKey: env.STRIPE_SECRET_KEY,
-      plans: [
-        {
-          name: "basic",
-          priceId: env.STRIPE_PRODUCT_BASIC,
-        },
-        {
-          name: "pro",
-          priceId: env.STRIPE_PRODUCT_PRO,
-        },
-        {
-          name: "enterprise",
-          priceId: env.STRIPE_PRODUCT_ENTERPRISE,
-        },
-      ],
-    },
-  );
+  return getAuth({
+    clientId: env.GOOGLE_CLIENT_ID,
+    clientSecret: env.GOOGLE_CLIENT_SECRET,
+  });
 };
 
 const authMiddleware = createMiddleware(async (c, next) => {
@@ -62,14 +42,6 @@ App.all("/trpc/*", authMiddleware, (c) => {
         userId,
       }),
   });
-});
-
-App.get("/click-socket", authMiddleware, async (c) => {
-  const userId = c.get("userId");
-  const headers = new Headers(c.req.raw.headers);
-  headers.set("account-id", userId);
-  const proxiedRequest = new Request(c.req.raw, { headers });
-  return c.env.BACKEND_SERVICE.fetch(proxiedRequest);
 });
 
 App.on(["POST", "GET"], "/api/auth/*", (c) => {

@@ -7,14 +7,14 @@ export function SiteHeader() {
   const pathname = routerState.location.pathname;
 
   const getPageTitle = (path: string) => {
-    if (path === "/app") return "Dashboard";
-    if (path === "/app/links") return "Links";
-    if (path === "/app/create") return "Create Link";
-    if (path.startsWith("/app/link/")) {
-      return `Link`;
-    }
-    // Add more path mappings as needed
-    return "Dashboard";
+    if (path === "/app" || path === "/app/") return "Dashboard";
+    if (path === "/app/my-sessions") return "My Sessions";
+    if (path === "/app/leaderboard") return "Leaderboard";
+    if (path === "/app/admin" || path === "/app/admin/") return "Admin";
+    if (path === "/app/admin/log-session") return "Log Session";
+    if (path === "/app/admin/members") return "Members";
+    if (path === "/app/admin/import") return "Import Data";
+    return "EMS Studio";
   };
 
   return (

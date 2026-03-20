@@ -19,13 +19,9 @@
       "types": "./dist/src/queries/*.d.ts",
       "default": "./dist/src/queries/*.js"
     },
-    "./zod-schema/*": {
-      "types": "./dist/src/zod/*.d.ts",
-      "default": "./dist/src/zod/*.js"
-    },
-    "./durable-objects-helpers": {
-      "types": "./dist/src/durable-objects-helpers/*.d.ts",
-      "default": "./dist/src/durable-objects-helpers/*.js"
+    "./utils/*": {
+      "types": "./dist/src/utils/*.d.ts",
+      "default": "./dist/src/utils/*.js"
     },
     "./auth": {
       "types": "./dist/src/auth.d.ts",
@@ -36,14 +32,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@better-auth/stripe": "1.3.4",
     "better-auth": "1.3.4",
     "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.44.7",
     "kysely": "^0.28.10",
     "kysely-d1": "^0.4.0",
     "nanoid": "^5.1.6",
-    "stripe": "^18.5.0",
     "uuid": "^11.1.0",
     "zod": "^3.25.76"
   },

@@ -1,12 +1,32 @@
 import { AppSidebar } from "@/components/common/app-sidebar";
 import { SiteHeader } from "@/components/common/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { Outlet, createFileRoute } from "@tanstack/react-router";
+import {
+  Outlet,
+  createFileRoute,
+  redirect,
+  isRedirect,
+} from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/app/_authed")({
+  beforeLoad: async ({ context }) => {
+    try {
+      const profile = await context.queryClient.fetchQuery(
+        context.trpc.profile.getMyProfile.queryOptions(),
+      );
+      if (!profile.profileComplete) {
+        throw redirect({ to: "/app/setup-profile" });
+      }
+      return { profile };
+    } catch (err) {
+      if (isRedirect(err)) throw err;
+      throw redirect({ to: "/" });
+    }
+  },
   component: RouteComponent,
 });
+
 function RouteComponent() {
   return (
     <div className="h-screen overflow-hidden flex">

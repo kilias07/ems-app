@@ -1,5 +1,5 @@
 import * as React from "react";
-import { IconInnerShadowTop } from "@tabler/icons-react";
+import { IconBolt } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/common/nav-main";
 import { NavUser } from "@/components/common/nav-user";
@@ -23,9 +23,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">SmrtLnks</span>
+              <a href="/app/">
+                <IconBolt className="!size-5 text-yellow-400" />
+                <span className="text-base font-semibold">EMS Studio</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

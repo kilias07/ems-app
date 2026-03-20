@@ -1,3 +1,5 @@
+import { getMemberById } from "@repo/data-ops/queries/members";
+
 export async function createContext({
   req,
   env,
@@ -9,12 +11,18 @@ export async function createContext({
   workerCtx: ExecutionContext;
   userId: string;
 }) {
+  const profile = await getMemberById(userId);
+
   return {
     req,
     env,
     workerCtx,
     userInfo: {
-      userId: userId,
+      userId,
+      role: profile?.role ?? "member",
+      nickname: profile?.nickname ?? null,
+      profileComplete: profile?.profileComplete === 1,
+      avatarUrl: profile?.avatarUrl ?? null,
     },
   };
 }

@@ -1,79 +1,114 @@
 import {
-  IconCirclePlusFilled,
   IconDashboard,
-  IconLink,
-  IconReport,
+  IconTrophy,
+  IconHistory,
+  IconUsers,
+  IconFileImport,
+  IconPlus,
 } from "@tabler/icons-react";
 
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { trpc } from "@/router";
+import { useSuspenseQuery } from "@tanstack/react-query";
 
-export function NavMain() {
+function NavItems() {
   const nav = useNavigate();
+  const { location } = useRouterState();
 
-  const items = [
+  const { data: profile } = useSuspenseQuery(
+    trpc.profile.getMyProfile.queryOptions(),
+  );
+
+  const memberItems = [
     {
       title: "Dashboard",
-      navigate: () =>
-        nav({
-          to: "/app",
-        }),
+      to: "/app/",
       icon: IconDashboard,
     },
     {
-      title: "Links",
-      navigate: () =>
-        nav({
-          to: "/app/links",
-        }),
-      icon: IconLink,
+      title: "My Sessions",
+      to: "/app/my-sessions",
+      icon: IconHistory,
     },
     {
-      title: "Evaluations",
-      navigate: () =>
-        nav({
-          to: "/app/evaluations",
-        }),
-      icon: IconReport,
+      title: "Leaderboard",
+      to: "/app/leaderboard",
+      icon: IconTrophy,
     },
   ];
 
+  const adminItems = [
+    {
+      title: "Log Session",
+      to: "/app/admin/log-session",
+      icon: IconPlus,
+    },
+    {
+      title: "Members",
+      to: "/app/admin/members",
+      icon: IconUsers,
+    },
+    {
+      title: "Import Data",
+      to: "/app/admin/import",
+      icon: IconFileImport,
+    },
+  ];
+
+  const isActive = (to: string) => location.pathname === to;
+
   return (
-    <SidebarGroup>
-      <SidebarGroupContent className="flex flex-col gap-2">
-        <SidebarMenu>
-          <SidebarMenuItem className="flex items-center gap-2">
+    <SidebarGroupContent className="flex flex-col gap-2">
+      <SidebarMenu>
+        {memberItems.map((item) => (
+          <SidebarMenuItem key={item.title}>
             <SidebarMenuButton
-              onClick={() =>
-                nav({
-                  to: "/app/create",
-                })
-              }
-              tooltip="Quick Create"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground min-w-8 duration-200 ease-linear"
+              onClick={() => nav({ to: item.to })}
+              tooltip={item.title}
+              isActive={isActive(item.to)}
             >
-              <IconCirclePlusFilled />
-              <span>Create Link</span>
+              {item.icon && <item.icon />}
+              <span>{item.title}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
-        </SidebarMenu>
-        <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton onClick={item.navigate} tooltip={item.title}>
-                {item.icon && <item.icon />}
-                <span>{item.title}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
+        ))}
+      </SidebarMenu>
+
+      {profile.role === "admin" && (
+        <>
+          <SidebarGroupLabel>Admin</SidebarGroupLabel>
+          <SidebarMenu>
+            {adminItems.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  onClick={() => nav({ to: item.to })}
+                  tooltip={item.title}
+                  isActive={isActive(item.to)}
+                >
+                  {item.icon && <item.icon />}
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </>
+      )}
+    </SidebarGroupContent>
+  );
+}
+
+export function NavMain() {
+  return (
+    <SidebarGroup>
+      <NavItems />
     </SidebarGroup>
   );
 }
