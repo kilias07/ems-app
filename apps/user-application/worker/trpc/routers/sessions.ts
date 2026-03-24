@@ -1,4 +1,5 @@
 import { t } from "@/worker/trpc/trpc-instance";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
   getSessionsByMember,
@@ -9,7 +10,6 @@ import {
 import { SUIT_MULTIPLIERS } from "@repo/data-ops/utils/suit-multipliers";
 
 const genId = () => crypto.randomUUID();
-const suitSizeSchema = z.enum(["R0", "R1", "RW2", "R2", "R3", "R4", "R5"]);
 
 export const sessionsRoutes = t.router({
   getMySessions: t.procedure
@@ -36,18 +36,24 @@ export const sessionsRoutes = t.router({
     .input(
       z.object({
         sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        suitSize: suitSizeSchema,
         rawPoints: z.number().int().positive(),
         notes: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const correctedPoints = input.rawPoints * SUIT_MULTIPLIERS[input.suitSize];
+      const suitSize = ctx.userInfo.suitSize;
+      if (!suitSize) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Please set your suit size in your profile before logging sessions.",
+        });
+      }
+      const correctedPoints = input.rawPoints * SUIT_MULTIPLIERS[suitSize];
       await insertSession({
         id: genId(),
         memberId: ctx.userInfo.userId,
         sessionDate: input.sessionDate,
-        suitSize: input.suitSize,
+        suitSize,
         rawPoints: input.rawPoints,
         correctedPoints,
         createdBy: ctx.userInfo.userId,

@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { IconPlus } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { SUIT_MULTIPLIERS, SUIT_SIZES } from "@repo/data-ops/utils/suit-multipliers";
@@ -49,12 +49,72 @@ export const Route = createFileRoute("/app/_authed/my-sessions")({
   component: MySessionsPage,
 });
 
-function LogSessionDialog({ defaultSuitSize }: { defaultSuitSize?: string | null }) {
+// ── Change suit size dialog ────────────────────────────────────────────────
+
+function ChangeSuitDialog({ currentSuit }: { currentSuit?: string | null }) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [suitSize, setSuitSize] = useState(currentSuit ?? "");
+
+  const updateSuit = useMutation(
+    trpc.profile.updateSuitSize.mutationOptions({
+      onSuccess: () => {
+        toast.success("Suit size updated.");
+        setOpen(false);
+        queryClient.invalidateQueries({ queryKey: trpc.profile.getMyProfile.queryKey() });
+      },
+      onError: (err) => toast.error(err.message),
+    }),
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-muted-foreground">
+          <Pencil className="size-3" />
+          {currentSuit ? `Suit: ${currentSuit}` : "Set suit size"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-xs">
+        <DialogHeader>
+          <DialogTitle>Change Suit Size</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <Select value={suitSize} onValueChange={setSuitSize}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select suit…" />
+            </SelectTrigger>
+            <SelectContent>
+              {SUIT_SIZES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                  <span className="ml-2 text-muted-foreground text-xs">
+                    ×{SUIT_MULTIPLIERS[s]}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            className="w-full"
+            disabled={!suitSize || updateSuit.isPending}
+            onClick={() => updateSuit.mutate({ suitSize: suitSize as any })}
+          >
+            {updateSuit.isPending ? "Saving…" : "Save"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Log session dialog ─────────────────────────────────────────────────────
+
+function LogSessionDialog({ suitSize }: { suitSize?: string | null }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
   const [sessionDate, setSessionDate] = useState(today);
-  const [suitSize, setSuitSize] = useState(defaultSuitSize ?? "");
   const [rawPoints, setRawPoints] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -71,7 +131,6 @@ function LogSessionDialog({ defaultSuitSize }: { defaultSuitSize?: string | null
         toast.success(`Session logged! Corrected points: ${data.correctedPoints.toFixed(1)}`);
         setOpen(false);
         setSessionDate(today);
-        setSuitSize(defaultSuitSize ?? "");
         setRawPoints("");
         setNotes("");
         queryClient.invalidateQueries({ queryKey: trpc.sessions.getMySessions.queryKey() });
@@ -82,16 +141,14 @@ function LogSessionDialog({ defaultSuitSize }: { defaultSuitSize?: string | null
     }),
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!suitSize || !rawPoints) return;
-    logSession.mutate({
-      sessionDate,
-      suitSize: suitSize as any,
-      rawPoints: parseInt(rawPoints),
-      notes: notes || undefined,
-    });
-  };
+  if (!suitSize) {
+    return (
+      <Button disabled title="Set your suit size first">
+        <IconPlus className="size-4 mr-1" />
+        Log Session
+      </Button>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -105,7 +162,24 @@ function LogSessionDialog({ defaultSuitSize }: { defaultSuitSize?: string | null
         <DialogHeader>
           <DialogTitle>Log My Session</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!rawPoints) return;
+            logSession.mutate({
+              sessionDate,
+              rawPoints: parseInt(rawPoints),
+              notes: notes || undefined,
+            });
+          }}
+          className="space-y-4 pt-2"
+        >
+          {/* Suit info — read-only */}
+          <div className="flex items-center justify-between rounded-md border px-3 py-2 bg-muted/40">
+            <span className="text-sm text-muted-foreground">Suit size</span>
+            <span className="font-mono font-semibold">{suitSize}</span>
+          </div>
+
           <div className="space-y-1">
             <Label>Date</Label>
             <Input
@@ -117,22 +191,6 @@ function LogSessionDialog({ defaultSuitSize }: { defaultSuitSize?: string | null
           </div>
 
           <div className="space-y-1">
-            <Label>Suit Size</Label>
-            <Select value={suitSize} onValueChange={setSuitSize}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select suit…" />
-              </SelectTrigger>
-              <SelectContent>
-                {SUIT_SIZES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s} <span className="text-muted-foreground text-xs">×{SUIT_MULTIPLIERS[s]}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
             <Label>Raw Points</Label>
             <Input
               type="number"
@@ -141,6 +199,7 @@ function LogSessionDialog({ defaultSuitSize }: { defaultSuitSize?: string | null
               value={rawPoints}
               onChange={(e) => setRawPoints(e.target.value)}
               required
+              autoFocus
             />
             {correctedPreview && (
               <div className="flex items-center gap-2 pt-1">
@@ -151,7 +210,10 @@ function LogSessionDialog({ defaultSuitSize }: { defaultSuitSize?: string | null
           </div>
 
           <div className="space-y-1">
-            <Label>Notes <span className="text-muted-foreground text-xs">(optional)</span></Label>
+            <Label>
+              Notes{" "}
+              <span className="text-muted-foreground text-xs">(optional)</span>
+            </Label>
             <Textarea
               placeholder="Any observations…"
               value={notes}
@@ -163,7 +225,7 @@ function LogSessionDialog({ defaultSuitSize }: { defaultSuitSize?: string | null
           <Button
             type="submit"
             className="w-full"
-            disabled={logSession.isPending || !suitSize || !rawPoints}
+            disabled={logSession.isPending || !rawPoints}
           >
             {logSession.isPending ? "Saving…" : "Save Session"}
           </Button>
@@ -172,6 +234,8 @@ function LogSessionDialog({ defaultSuitSize }: { defaultSuitSize?: string | null
     </Dialog>
   );
 }
+
+// ── Page ───────────────────────────────────────────────────────────────────
 
 function MySessionsPage() {
   const { data: profile } = useQuery(trpc.profile.getMyProfile.queryOptions());
@@ -202,15 +266,27 @@ function MySessionsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">My Sessions</h1>
-        <LogSessionDialog defaultSuitSize={profile?.suitSize} />
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold tracking-tight">My Sessions</h1>
+          <ChangeSuitDialog currentSuit={profile?.suitSize} />
+        </div>
+        <LogSessionDialog suitSize={profile?.suitSize} />
       </div>
+
+      {!profile?.suitSize && (
+        <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-400">
+          Set your suit size (click the pencil icon above) before logging sessions.
+        </div>
+      )}
 
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium text-muted-foreground">Filter by Date</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Filter by Date
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 items-end flex-wrap">
@@ -249,62 +325,52 @@ function MySessionsPage() {
       </Card>
 
       {/* Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            {data.total} session{data.total !== 1 ? "s" : ""} total
-          </CardTitle>
-          {profile?.suitSize && (
-            <CardDescription>Your suit: <span className="font-mono font-semibold">{profile.suitSize}</span></CardDescription>
-          )}
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Suit</TableHead>
+              <TableHead className="text-right">Raw Points</TableHead>
+              <TableHead className="text-right">Corrected Points</TableHead>
+              <TableHead>Notes</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.data.length === 0 ? (
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Suit</TableHead>
-                <TableHead className="text-right">Raw Points</TableHead>
-                <TableHead className="text-right">Corrected Points</TableHead>
-                <TableHead>Notes</TableHead>
+                <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                  No sessions found.
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.data.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                    No sessions found.
+            ) : (
+              data.data.map((session) => (
+                <TableRow key={session.id}>
+                  <TableCell>{session.sessionDate}</TableCell>
+                  <TableCell>
+                    <span className="font-mono text-sm bg-muted px-2 py-0.5 rounded">
+                      {session.suitSize}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">{session.rawPoints}</TableCell>
+                  <TableCell className="text-right font-semibold">
+                    {session.correctedPoints.toFixed(1)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm max-w-xs truncate">
+                    {session.notes ?? "—"}
                   </TableCell>
                 </TableRow>
-              ) : (
-                data.data.map((session) => (
-                  <TableRow key={session.id}>
-                    <TableCell>{session.sessionDate}</TableCell>
-                    <TableCell>
-                      <span className="font-mono text-sm bg-muted px-2 py-0.5 rounded">
-                        {session.suitSize}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">{session.rawPoints}</TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {session.correctedPoints.toFixed(1)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm max-w-xs truncate">
-                      {session.notes ?? "—"}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
+            Page {page} of {totalPages} · {data.total} sessions
           </p>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => changePage(page - 1)} disabled={page === 1}>
