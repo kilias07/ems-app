@@ -42,11 +42,23 @@ export async function createMemberProfile(data: {
   });
 }
 
-export async function updateNickname(id: string, nickname: string) {
+export async function updateNickname(
+  id: string,
+  nickname: string,
+  suitSize?: string | null,
+) {
   const db = getDb();
   await db
     .update(memberProfile)
-    .set({ nickname, profileComplete: 1 })
+    .set({ nickname, profileComplete: 1, ...(suitSize ? { suitSize } : {}) })
+    .where(eq(memberProfile.id, id));
+}
+
+export async function updateSuitSize(id: string, suitSize: string) {
+  const db = getDb();
+  await db
+    .update(memberProfile)
+    .set({ suitSize })
     .where(eq(memberProfile.id, id));
 }
 

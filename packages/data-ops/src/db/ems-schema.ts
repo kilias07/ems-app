@@ -7,6 +7,7 @@ export const memberProfile = sqliteTable("member_profile", {
   role: text("role").notNull().default("user"),
   isActive: integer("is_active").notNull().default(1),
   profileComplete: integer("profile_complete").notNull().default(0),
+  suitSize: text("suit_size"),
   avatarUrl: text("avatar_url"),
   joinedAt: text("joined_at")
     .notNull()

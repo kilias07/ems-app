@@ -19,10 +19,11 @@ export async function createContext({
     workerCtx,
     userInfo: {
       userId,
-      role: profile?.role ?? "member",
+      role: profile?.role ?? "user",
       nickname: profile?.nickname ?? null,
       profileComplete: profile?.profileComplete === 1,
       avatarUrl: profile?.avatarUrl ?? null,
+      suitSize: profile?.suitSize ?? null,
     },
   };
 }

@@ -4,10 +4,26 @@ import { trpc } from "@/router";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { IconBolt } from "@tabler/icons-react";
 import { isRedirect } from "@tanstack/react-router";
+import { SUIT_MULTIPLIERS, SUIT_SIZES } from "@repo/data-ops/utils/suit-multipliers";
 
 export const Route = createFileRoute("/app/setup-profile")({
   loader: async ({ context }) => {
@@ -26,10 +42,22 @@ export const Route = createFileRoute("/app/setup-profile")({
   component: SetupProfilePage,
 });
 
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 function SetupProfilePage() {
   const router = useRouter();
-  const [nickname, setNickname] = useState("");
+  const [raw, setRaw] = useState("");
+  const [suitSize, setSuitSize] = useState("");
   const [error, setError] = useState("");
+
+  const nickname = slugify(raw);
 
   const updateNickname = useMutation(
     trpc.profile.updateNickname.mutationOptions({
@@ -46,42 +74,83 @@ function SetupProfilePage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    updateNickname.mutate({ nickname });
+    updateNickname.mutate({
+      nickname,
+      suitSize: (suitSize as any) || undefined,
+    });
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <Toaster />
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
           <div className="flex justify-center">
             <IconBolt className="size-10 text-yellow-400" />
           </div>
-          <CardTitle className="text-2xl">Set Your Nickname</CardTitle>
+          <CardTitle className="text-2xl">Complete Your Profile</CardTitle>
           <CardDescription>
-            Choose a unique nickname that will appear on the leaderboard.
+            Set your nickname and suit size to get started on the leaderboard.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Nickname */}
             <div className="space-y-2">
+              <Label htmlFor="nickname">Nickname</Label>
               <Input
-                placeholder="e.g. IronMike, FlashKamil"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                minLength={2}
-                maxLength={30}
+                id="nickname"
+                placeholder="e.g. Iron Mike, Flash Kamil"
+                value={raw}
+                onChange={(e) => {
+                  setRaw(e.target.value);
+                  setError("");
+                }}
+                maxLength={40}
                 required
                 autoFocus
               />
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {raw !== nickname && nickname.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Will be saved as:{" "}
+                  <span className="font-medium text-foreground">{nickname}</span>
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
-                2–30 characters, no spaces.
+                Letters, numbers, and hyphens only. Spaces become hyphens.
               </p>
             </div>
+
+            {/* Suit size */}
+            <div className="space-y-2">
+              <Label htmlFor="suit-size">EMS Suit Size</Label>
+              <Select value={suitSize} onValueChange={setSuitSize}>
+                <SelectTrigger id="suit-size">
+                  <SelectValue placeholder="Select your suit size…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUIT_SIZES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                      <span className="ml-2 text-muted-foreground text-xs">
+                        ×{SUIT_MULTIPLIERS[s]} multiplier
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Your suit size determines the point multiplier. You can change
+                this later in your profile.
+              </p>
+            </div>
+
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
             <Button
               type="submit"
               className="w-full"
-              disabled={updateNickname.isPending || nickname.length < 2}
+              disabled={updateNickname.isPending || nickname.length < 2 || nickname.length > 30}
             >
               {updateNickname.isPending ? "Saving…" : "Continue to Dashboard"}
             </Button>
