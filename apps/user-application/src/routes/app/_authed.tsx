@@ -18,6 +18,9 @@ export const Route = createFileRoute("/app/_authed")({
       if (!profile.profileComplete) {
         throw redirect({ to: "/app/setup-profile" });
       }
+      if (profile.status === "pending") {
+        throw redirect({ to: "/app/pending" });
+      }
       return { profile };
     } catch (err) {
       if (isRedirect(err)) throw err;

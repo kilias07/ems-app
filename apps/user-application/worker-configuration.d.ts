@@ -14,6 +14,8 @@ declare namespace Cloudflare {
 		STRIPE_SECRET_KEY: string;
 		STRIPE_WEBHOOK_KEY: string;
 		APP_SECRET: string;
+		RESEND_API_KEY: string;
+		RESEND_FROM_EMAIL: string;
 		DB: D1Database;
 		BACKEND_SERVICE: Fetcher /* data-service */;
 		ASSETS: Fetcher;

@@ -24,7 +24,7 @@ function UserProfilePopup({ data, children }: UserProfilePopupProps) {
     await authClient.signOut({
       fetchOptions: {
         onSuccess: () => {
-          window.location.reload();
+          window.location.href = "/";
         },
       },
     });
@@ -75,12 +75,12 @@ function UserProfilePopup({ data, children }: UserProfilePopupProps) {
             {loading ? (
               <>
                 <div className="w-4 h-4 mr-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                Signing out...
+                Wylogowywanie...
               </>
             ) : (
               <>
                 <LogOut className="w-4 h-4 mr-3" />
-                Sign out
+                Wyloguj się
               </>
             )}
           </Button>

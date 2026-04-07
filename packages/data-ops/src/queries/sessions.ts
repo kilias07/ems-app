@@ -1,6 +1,6 @@
 import { and, eq, gte, lte, sql, desc } from "drizzle-orm";
 import { getDb } from "../db/database";
-import { trainingSession } from "../db/ems-schema";
+import { memberProfile, trainingSession } from "../db/ems-schema";
 
 export async function getSessionsByMember(
   memberId: string,
@@ -40,19 +40,21 @@ export async function getMemberStats(memberId: string) {
 
   const today = new Date();
   const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
+  weekStart.setDate(today.getDate() - today.getDay() + 1);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
-  const [totals, weekly, monthly] = await Promise.all([
+  const approvedOnly = eq(trainingSession.status, "approved");
+
+  const [totals, weekly, weeklyPoints, monthly] = await Promise.all([
     db
       .select({
         totalSessions: sql<number>`count(*)`,
         totalPoints: sql<number>`sum(${trainingSession.correctedPoints})`,
       })
       .from(trainingSession)
-      .where(eq(trainingSession.memberId, memberId)),
+      .where(and(eq(trainingSession.memberId, memberId), approvedOnly)),
 
     db
       .select({ count: sql<number>`count(*)` })
@@ -60,6 +62,7 @@ export async function getMemberStats(memberId: string) {
       .where(
         and(
           eq(trainingSession.memberId, memberId),
+          approvedOnly,
           gte(trainingSession.sessionDate, fmt(weekStart)),
         ),
       ),
@@ -70,6 +73,18 @@ export async function getMemberStats(memberId: string) {
       .where(
         and(
           eq(trainingSession.memberId, memberId),
+          approvedOnly,
+          gte(trainingSession.sessionDate, fmt(weekStart)),
+        ),
+      ),
+
+    db
+      .select({ points: sql<number>`sum(${trainingSession.correctedPoints})` })
+      .from(trainingSession)
+      .where(
+        and(
+          eq(trainingSession.memberId, memberId),
+          approvedOnly,
           gte(trainingSession.sessionDate, fmt(monthStart)),
         ),
       ),
@@ -79,6 +94,7 @@ export async function getMemberStats(memberId: string) {
     totalSessions: totals[0]?.totalSessions ?? 0,
     totalPoints: totals[0]?.totalPoints ?? 0,
     weekSessions: weekly[0]?.count ?? 0,
+    weekPoints: weeklyPoints[0]?.points ?? 0,
     monthPoints: monthly[0]?.points ?? 0,
   };
 }
@@ -101,6 +117,7 @@ export async function getWeeklyPointsHistory(memberId: string) {
       .where(
         and(
           eq(trainingSession.memberId, memberId),
+          eq(trainingSession.status, "approved"),
           gte(trainingSession.sessionDate, fmt(weekStart)),
           lte(trainingSession.sessionDate, fmt(weekEnd)),
         ),
@@ -123,11 +140,15 @@ export async function insertSession(data: {
   suitSize: string;
   rawPoints: number;
   correctedPoints: number;
+  status?: string;
   createdBy: string;
   notes?: string | null;
 }) {
   const db = getDb();
-  await db.insert(trainingSession).values(data);
+  await db.insert(trainingSession).values({
+    ...data,
+    status: data.status ?? "pending",
+  });
 }
 
 export async function insertSessionsBatch(
@@ -138,13 +159,88 @@ export async function insertSessionsBatch(
     suitSize: string;
     rawPoints: number;
     correctedPoints: number;
+    status?: string;
     createdBy: string;
     notes?: string | null;
   }[],
 ) {
   const db = getDb();
   if (rows.length === 0) return;
-  await db.insert(trainingSession).values(rows);
+  await db.insert(trainingSession).values(
+    rows.map((r) => ({ ...r, status: r.status ?? "pending" })),
+  );
+}
+
+export async function approveSession(
+  sessionId: string,
+  reviewedBy: string,
+  edits?: { rawPoints?: number; correctedPoints?: number; notes?: string | null },
+) {
+  const db = getDb();
+  await db
+    .update(trainingSession)
+    .set({
+      status: "approved",
+      reviewedBy,
+      rejectionNote: null,
+      ...(edits ?? {}),
+    })
+    .where(eq(trainingSession.id, sessionId));
+}
+
+export async function rejectSession(
+  sessionId: string,
+  reviewedBy: string,
+  rejectionNote: string,
+) {
+  const db = getDb();
+  await db
+    .update(trainingSession)
+    .set({ status: "rejected", reviewedBy, rejectionNote })
+    .where(eq(trainingSession.id, sessionId));
+}
+
+export async function resubmitSession(sessionId: string, memberId: string) {
+  const db = getDb();
+  await db
+    .update(trainingSession)
+    .set({ status: "pending", rejectionNote: null, reviewedBy: null })
+    .where(and(eq(trainingSession.id, sessionId), eq(trainingSession.memberId, memberId)));
+}
+
+export async function getPendingSessionsForTrainer(trainerId: string) {
+  const db = getDb();
+  const rows = await db
+    .select({
+      session: trainingSession,
+      memberNickname: memberProfile.nickname,
+    })
+    .from(trainingSession)
+    .innerJoin(memberProfile, eq(trainingSession.memberId, memberProfile.id))
+    .where(
+      and(
+        eq(trainingSession.status, "pending"),
+        eq(memberProfile.trainerId, trainerId),
+      ),
+    )
+    .orderBy(desc(trainingSession.createdAt));
+
+  return rows.map((r) => ({ ...r.session, memberNickname: r.memberNickname }));
+}
+
+export async function getAllPendingSessions() {
+  const db = getDb();
+  const rows = await db
+    .select({
+      session: trainingSession,
+      memberNickname: memberProfile.nickname,
+    })
+    .from(trainingSession)
+    .innerJoin(memberProfile, eq(trainingSession.memberId, memberProfile.id))
+    .where(eq(trainingSession.status, "pending"))
+    .orderBy(desc(trainingSession.createdAt));
+
+  return rows.map((r) => ({ ...r.session, memberNickname: r.memberNickname }));
 }
 
 export async function deleteSession(sessionId: string) {

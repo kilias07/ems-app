@@ -3,17 +3,19 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import {
   updateNickname,
-  updateSuitSize,
   getMemberByNickname,
+  updateSuitSize,
 } from "@repo/data-ops/queries/members";
-
-const suitSizeSchema = z.enum(["R0", "R1", "RW2", "R2", "R3", "R4", "R5"]);
+import { getUserById } from "@repo/data-ops/queries/auth-user";
+import { sendEmail } from "@/worker/lib/email";
+import { welcomeEmailHtml } from "@/worker/lib/email-templates";
 
 export const profileRoutes = t.router({
   getMyProfile: t.procedure.query(({ ctx }) => {
     return {
       userId: ctx.userInfo.userId,
       role: ctx.userInfo.role,
+      status: ctx.userInfo.status,
       nickname: ctx.userInfo.nickname,
       profileComplete: ctx.userInfo.profileComplete,
       avatarUrl: ctx.userInfo.avatarUrl,
@@ -21,7 +23,6 @@ export const profileRoutes = t.router({
     };
   }),
 
-  // Called during initial setup — saves nickname + optional suit size
   updateNickname: t.procedure
     .input(
       z.object({
@@ -33,7 +34,6 @@ export const profileRoutes = t.router({
             /^[a-z0-9]+(-[a-z0-9]+)*$/,
             "Nickname must be lowercase letters, numbers, and hyphens only",
           ),
-        suitSize: suitSizeSchema.optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -44,13 +44,26 @@ export const profileRoutes = t.router({
           message: "Nickname already taken",
         });
       }
-      await updateNickname(ctx.userInfo.userId, input.nickname, input.suitSize);
+      await updateNickname(ctx.userInfo.userId, input.nickname);
+
+      ctx.workerCtx.waitUntil(
+        getUserById(ctx.userInfo.userId).then((authUser) => {
+          if (!authUser?.email) return;
+          return sendEmail({
+            apiKey: ctx.env.RESEND_API_KEY,
+            from: ctx.env.RESEND_FROM_EMAIL,
+            to: authUser.email,
+            subject: "Witaj w EMS Studio!",
+            html: welcomeEmailHtml(input.nickname),
+          });
+        }),
+      );
+
       return { success: true };
     }),
 
-  // Called from profile settings to change suit size later
   updateSuitSize: t.procedure
-    .input(z.object({ suitSize: suitSizeSchema }))
+    .input(z.object({ suitSize: z.enum(["R0", "R1", "RW2", "R2", "R3", "R4", "R5"]) }))
     .mutation(async ({ ctx, input }) => {
       await updateSuitSize(ctx.userInfo.userId, input.suitSize);
       return { success: true };

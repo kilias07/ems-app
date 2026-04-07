@@ -20,6 +20,7 @@ export async function createContext({
     userInfo: {
       userId,
       role: profile?.role ?? "user",
+      status: profile?.status ?? "pending",
       nickname: profile?.nickname ?? null,
       profileComplete: profile?.profileComplete === 1,
       avatarUrl: profile?.avatarUrl ?? null,

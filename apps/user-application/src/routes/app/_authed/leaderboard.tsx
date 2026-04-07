@@ -31,12 +31,14 @@ function getCurrentWeekKey() {
 type Period = "all" | "monthly" | "weekly";
 
 function LeaderboardTable({ period, periodKey }: { period: Period; periodKey?: string }) {
-  const { data: board } = useSuspenseQuery(
-    trpc.leaderboard.getLeaderboard.queryOptions({ period, periodKey }),
-  );
-  const { data: myProfile } = useSuspenseQuery(
-    trpc.profile.getMyProfile.queryOptions(),
-  );
+  const { data: board } = useSuspenseQuery({
+    ...trpc.leaderboard.getLeaderboard.queryOptions({ period, periodKey }),
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: myProfile } = useSuspenseQuery({
+    ...trpc.profile.getMyProfile.queryOptions(),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const trophy = ["🥇", "🥈", "🥉"];
 
@@ -45,17 +47,17 @@ function LeaderboardTable({ period, periodKey }: { period: Period; periodKey?: s
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-16">Rank</TableHead>
-            <TableHead>Member</TableHead>
-            <TableHead className="text-right">Sessions</TableHead>
-            <TableHead className="text-right">Total Points</TableHead>
+            <TableHead className="w-16">Miejsce</TableHead>
+            <TableHead>Uczestnik</TableHead>
+            <TableHead className="text-right">Sesje</TableHead>
+            <TableHead className="text-right">Łączne punkty</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {board.length === 0 ? (
             <TableRow>
               <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
-                No data for this period yet.
+                Brak danych dla tego okresu.
               </TableCell>
             </TableRow>
           ) : (
@@ -64,7 +66,7 @@ function LeaderboardTable({ period, periodKey }: { period: Period; periodKey?: s
               return (
                 <TableRow
                   key={entry.memberId}
-                  className={isMe ? "bg-yellow-400/5 font-semibold" : ""}
+                  className={isMe ? "bg-primary/5 font-semibold" : ""}
                 >
                   <TableCell className="text-center text-lg">
                     {entry.rank <= 3 ? trophy[entry.rank - 1] : entry.rank}
@@ -82,7 +84,7 @@ function LeaderboardTable({ period, periodKey }: { period: Period; periodKey?: s
                       <span>{entry.nickname}</span>
                       {isMe && (
                         <Badge variant="outline" className="text-xs">
-                          You
+                          Ty
                         </Badge>
                       )}
                     </div>
@@ -103,9 +105,17 @@ function LeaderboardTable({ period, periodKey }: { period: Period; periodKey?: s
 
 export const Route = createFileRoute("/app/_authed/leaderboard")({
   loader: async ({ context }) => {
+    const monthKey = getCurrentMonthKey();
+    const weekKey = getCurrentWeekKey();
     await Promise.all([
       context.queryClient.prefetchQuery(
         context.trpc.leaderboard.getLeaderboard.queryOptions({ period: "all" }),
+      ),
+      context.queryClient.prefetchQuery(
+        context.trpc.leaderboard.getLeaderboard.queryOptions({ period: "monthly", periodKey: monthKey }),
+      ),
+      context.queryClient.prefetchQuery(
+        context.trpc.leaderboard.getLeaderboard.queryOptions({ period: "weekly", periodKey: weekKey }),
       ),
       context.queryClient.prefetchQuery(
         context.trpc.profile.getMyProfile.queryOptions(),
@@ -120,13 +130,13 @@ function LeaderboardPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Ranking</h1>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as Period)}>
         <TabsList>
-          <TabsTrigger value="all">All Time</TabsTrigger>
-          <TabsTrigger value="monthly">This Month</TabsTrigger>
-          <TabsTrigger value="weekly">This Week</TabsTrigger>
+          <TabsTrigger value="all">Wszystkie czasy</TabsTrigger>
+          <TabsTrigger value="monthly">Ten miesiąc</TabsTrigger>
+          <TabsTrigger value="weekly">Ten tydzień</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="mt-4">

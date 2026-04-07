@@ -66,7 +66,7 @@ function parseCSV(text: string): ParsedRow[] {
         nickname: "",
         suitSize: "",
         rawPoints: 0,
-        error: "Need 4 columns: date, nickname, suit, raw_points",
+        error: "Wymagane 4 kolumny: data, pseudonim, kombinezon, punkty",
       };
     }
     const [date, nickname, suit, rawStr] = cols;
@@ -82,11 +82,11 @@ function parseCSV(text: string): ParsedRow[] {
       suitSize: suit.toUpperCase(),
       rawPoints,
       error: !validDate
-        ? "Invalid date (use YYYY-MM-DD)"
+        ? "Nieprawidłowa data (użyj YYYY-MM-DD)"
         : !validSuit
-          ? `Invalid suit: ${suit}`
+          ? `Nieprawidłowy kombinezon: ${suit}`
           : !validPoints
-            ? "Invalid raw points"
+            ? "Nieprawidłowe surowe punkty"
             : undefined,
     };
   });
@@ -126,7 +126,7 @@ function ImportPage() {
   const bulkImport = useMutation(
     trpc.admin.bulkImportSessions.mutationOptions({
       onSuccess: (data) => {
-        toast.success(`Imported ${data.inserted} sessions`);
+        toast.success(`Zaimportowano ${data.inserted} sesji`);
         setParsed(null);
         setCsvText("");
         queryClient.invalidateQueries({
@@ -153,16 +153,16 @@ function ImportPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Import Data</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Import danych</h1>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Paste CSV / TSV</CardTitle>
+          <CardTitle className="text-base">Wklej CSV / TSV</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1">
             <Label>
-              Format: <code className="text-xs bg-muted px-1 rounded">date, nickname, suit, raw_points</code>
+              Format: <code className="text-xs bg-muted px-1 rounded">data, pseudonim, kombinezon, punkty</code>
             </Label>
             <Textarea
               placeholder={"2026-01-10, FlashKamil, R2, 920\n2026-01-12, IronMike, R1, 1050"}
@@ -176,7 +176,7 @@ function ImportPage() {
             />
           </div>
           <Button onClick={handleParse} disabled={!csvText.trim()}>
-            Parse
+            Analizuj
           </Button>
         </CardContent>
       </Card>
@@ -185,11 +185,11 @@ function ImportPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              Preview
-              <Badge variant="secondary">{parsed.length} rows</Badge>
+              Podgląd
+              <Badge variant="secondary">{parsed.length} wierszy</Badge>
               {parsed.filter((r) => r.error).length > 0 && (
                 <Badge variant="destructive">
-                  {parsed.filter((r) => r.error).length} errors
+                  {parsed.filter((r) => r.error).length} błędy
                 </Badge>
               )}
             </CardTitle>
@@ -200,12 +200,12 @@ function ImportPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>#</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Nickname</TableHead>
-                    <TableHead>Suit</TableHead>
-                    <TableHead className="text-right">Raw Pts</TableHead>
-                    <TableHead className="text-right">Corrected</TableHead>
-                    <TableHead>Member mapping</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Pseudonim</TableHead>
+                    <TableHead>Kombinezon</TableHead>
+                    <TableHead className="text-right">Surowe pkt</TableHead>
+                    <TableHead className="text-right">Skorygowane</TableHead>
+                    <TableHead>Przypisanie uczestnika</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -248,7 +248,7 @@ function ImportPage() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="__none__">
-                                — not mapped —
+                                — niepowiązany —
                               </SelectItem>
                               {members
                                 .filter((m) => m.nickname)
@@ -269,15 +269,15 @@ function ImportPage() {
 
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                {validRows.length} of {parsed.length} rows ready to import
+                {validRows.length} z {parsed.length} wierszy gotowych do importu
               </p>
               <Button
                 onClick={handleImport}
                 disabled={validRows.length === 0 || bulkImport.isPending}
               >
                 {bulkImport.isPending
-                  ? "Importing…"
-                  : `Import ${validRows.length} Sessions`}
+                  ? "Importowanie…"
+                  : `Importuj ${validRows.length} sesji`}
               </Button>
             </div>
           </CardContent>

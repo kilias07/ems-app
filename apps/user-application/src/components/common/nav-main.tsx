@@ -5,6 +5,9 @@ import {
   IconUsers,
   IconFileImport,
   IconPlus,
+  IconSettings,
+  IconInbox,
+  IconMapPin,
 } from "@tabler/icons-react";
 
 import {
@@ -12,6 +15,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
@@ -24,23 +28,37 @@ export function NavMain() {
   const { location } = useRouterState();
 
   const { data: profile } = useQuery(trpc.profile.getMyProfile.queryOptions());
+  const { data: pendingMembers } = useQuery({
+    ...trpc.admin.getPendingMembers.queryOptions(),
+    enabled: profile?.role === "trainer" || profile?.role === "admin",
+  });
+  const { data: pendingSessions } = useQuery({
+    ...trpc.admin.getPendingSessions.queryOptions(),
+    enabled: profile?.role === "trainer" || profile?.role === "admin",
+  });
+
+  const inboxCount =
+    (pendingMembers?.length ?? 0) + (pendingSessions?.length ?? 0);
 
   const isActive = (to: string) =>
     location.pathname === to || location.pathname === to + "/";
 
   const memberItems = [
-    { title: "Dashboard", to: "/app/", icon: IconDashboard },
-    { title: "My Sessions", to: "/app/my-sessions", icon: IconHistory },
-    { title: "Leaderboard", to: "/app/leaderboard", icon: IconTrophy },
+    { title: "Panel główny", to: "/app/", icon: IconDashboard },
+    { title: "Moje sesje", to: "/app/my-sessions", icon: IconHistory },
+    { title: "Ranking", to: "/app/leaderboard", icon: IconTrophy },
+    { title: "Ustawienia", to: "/app/settings", icon: IconSettings },
   ];
 
   const trainerItems = [
-    { title: "Log Session", to: "/app/admin/log-session", icon: IconPlus },
-    { title: "Members", to: "/app/admin/members", icon: IconUsers },
+    { title: "Skrzynka", to: "/app/admin/inbox", icon: IconInbox, badge: inboxCount || null },
+    { title: "Dodaj sesję", to: "/app/admin/log-session", icon: IconPlus, badge: null },
+    { title: "Uczestnicy", to: "/app/admin/members", icon: IconUsers, badge: null },
+    { title: "Miejsca treningowe", to: "/app/admin/club-places", icon: IconMapPin, badge: null },
   ];
 
   const adminItems = [
-    { title: "Import Data", to: "/app/admin/import", icon: IconFileImport },
+    { title: "Import danych", to: "/app/admin/import", icon: IconFileImport, badge: null },
   ];
 
   const isTrainerOrAdmin =
@@ -70,7 +88,7 @@ export function NavMain() {
 
       {isTrainerOrAdmin && (
         <SidebarGroup>
-          <SidebarGroupLabel>Trainer</SidebarGroupLabel>
+          <SidebarGroupLabel>Trener</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {trainerItems.map((item) => (
@@ -83,6 +101,9 @@ export function NavMain() {
                     <item.icon />
                     <span>{item.title}</span>
                   </SidebarMenuButton>
+                  {item.badge != null && item.badge > 0 && (
+                    <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

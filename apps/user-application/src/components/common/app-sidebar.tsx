@@ -24,7 +24,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <a href="/app/">
-                <IconBolt className="!size-5 text-yellow-400" />
+                <IconBolt className="!size-5 text-primary" />
                 <span className="text-base font-semibold">EMS Studio</span>
               </a>
             </SidebarMenuButton>

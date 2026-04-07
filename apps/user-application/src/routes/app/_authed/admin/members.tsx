@@ -11,15 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -27,22 +19,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { Check, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/app/_authed/admin/members")({
   loader: async ({ context }) => {
-    await context.queryClient.prefetchQuery(
-      context.trpc.admin.listMembers.queryOptions(),
-    );
+    await Promise.all([
+      context.queryClient.prefetchQuery(
+        context.trpc.admin.listMembers.queryOptions(),
+      ),
+      context.queryClient.prefetchQuery(
+        context.trpc.admin.listTrainers.queryOptions(),
+      ),
+      context.queryClient.prefetchQuery(
+        context.trpc.admin.listClubPlaces.queryOptions(),
+      ),
+    ]);
   },
   component: MembersPage,
 });
 
 const ROLE_LABELS: Record<string, string> = {
-  user: "User",
-  trainer: "Trainer",
+  user: "Użytkownik",
+  trainer: "Trener",
   admin: "Admin",
 };
 
@@ -54,32 +64,23 @@ const ROLE_VARIANTS: Record<string, "default" | "secondary" | "outline"> = {
 
 function MembersPage() {
   const queryClient = useQueryClient();
-  const { data: members } = useSuspenseQuery(
-    trpc.admin.listMembers.queryOptions(),
-  );
+  const { data: members } = useSuspenseQuery(trpc.admin.listMembers.queryOptions());
   const { data: myProfile } = useQuery(trpc.profile.getMyProfile.queryOptions());
+  const { data: trainers } = useQuery(trpc.admin.listTrainers.queryOptions());
+  const { data: clubPlaces } = useQuery(trpc.admin.listClubPlaces.queryOptions());
 
   const isAdmin = myProfile?.role === "admin";
 
-  const [newNickname, setNewNickname] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string | null } | null>(null);
 
   const invalidate = () =>
-    queryClient.invalidateQueries({
-      queryKey: trpc.admin.listMembers.queryKey(),
-    });
+    queryClient.invalidateQueries({ queryKey: trpc.admin.listMembers.queryKey() });
 
-  const createMember = useMutation(
-    trpc.admin.createMember.mutationOptions({
-      onSuccess: () => {
-        toast.success("Member created");
-        setNewNickname("");
-        setDialogOpen(false);
-        invalidate();
-      },
-      onError: (err) => toast.error(err.message),
-    }),
-  );
+  const invalidateInbox = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: trpc.admin.getPendingSessions.queryKey() }),
+      queryClient.invalidateQueries({ queryKey: trpc.admin.getPendingMembers.queryKey() }),
+    ]);
 
   const setActive = useMutation(
     trpc.admin.setMemberActive.mutationOptions({
@@ -95,65 +96,97 @@ function MembersPage() {
     }),
   );
 
+  const approveMember = useMutation(
+    trpc.admin.approveMember.mutationOptions({
+      onSuccess: () => { toast.success("Uczestnik zaakceptowany."); invalidate(); },
+      onError: (err) => toast.error(err.message),
+    }),
+  );
+
+  const assignTrainer = useMutation(
+    trpc.admin.assignTrainer.mutationOptions({
+      onSuccess: () => { invalidate(); invalidateInbox(); },
+      onError: (err) => toast.error(err.message),
+    }),
+  );
+
+  const assignClubPlace = useMutation(
+    trpc.admin.assignClubPlace.mutationOptions({
+      onSuccess: invalidate,
+      onError: (err) => toast.error(err.message),
+    }),
+  );
+
+  const deleteAccount = useMutation(
+    trpc.admin.deleteAccount.mutationOptions({
+      onSuccess: () => {
+        toast.success("Konto usunięte.");
+        setDeleteTarget(null);
+        invalidate();
+      },
+      onError: (err) => { toast.error(err.message); setDeleteTarget(null); },
+    }),
+  );
+
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Members</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>+ Add Member</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Stub Member</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="space-y-1">
-                <Label>Nickname</Label>
-                <Input
-                  placeholder="e.g. IronMike"
-                  value={newNickname}
-                  onChange={(e) => setNewNickname(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (newNickname.length >= 2)
-                        createMember.mutate({ nickname: newNickname });
-                    }
-                  }}
-                />
-              </div>
-              <Button
-                className="w-full"
-                disabled={newNickname.length < 2 || createMember.isPending}
-                onClick={() => createMember.mutate({ nickname: newNickname })}
-              >
-                {createMember.isPending ? "Creating…" : "Create Member"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Uczestnicy</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Zarządzaj kontami uczestników, którzy się zarejestrowali.
+        </p>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nickname</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Profile</TableHead>
-              <TableHead>Joined</TableHead>
-              <TableHead className="text-right">Active</TableHead>
+              <TableHead>Imię i nazwisko</TableHead>
+              <TableHead>E-mail</TableHead>
+              <TableHead>Pseudonim</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Rola</TableHead>
+              <TableHead>Trener</TableHead>
+              <TableHead>Miejsce</TableHead>
+              <TableHead className="text-right">Aktywny</TableHead>
+              {isAdmin && <TableHead />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {members.map((member) => (
               <TableRow key={member.id}>
-                <TableCell className="font-medium">
+                <TableCell className="font-medium whitespace-nowrap">
+                  {member.name ?? (
+                    <span className="italic text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                  {member.email ?? (
+                    <span className="italic">—</span>
+                  )}
+                </TableCell>
+                <TableCell>
                   {member.nickname ?? (
-                    <span className="text-muted-foreground italic">
-                      (no nickname)
-                    </span>
+                    <span className="italic text-muted-foreground">(brak)</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {member.status === "pending" ? (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">Oczekuje</Badge>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-xs"
+                        disabled={approveMember.isPending}
+                        onClick={() => approveMember.mutate({ memberId: member.id })}
+                      >
+                        <Check className="size-3 mr-1" />
+                        Akceptuj
+                      </Button>
+                    </div>
+                  ) : (
+                    <Badge variant="outline">Aktywny</Badge>
                   )}
                 </TableCell>
                 <TableCell>
@@ -168,8 +201,8 @@ function MembersPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="trainer">Trainer</SelectItem>
+                        <SelectItem value="user">Użytkownik</SelectItem>
+                        <SelectItem value="trainer">Trener</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
@@ -180,14 +213,50 @@ function MembersPage() {
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant={member.profileComplete ? "outline" : "destructive"}
+                  <Select
+                    value={member.trainerId ?? "__none__"}
+                    onValueChange={(val) =>
+                      assignTrainer.mutate({
+                        userId: member.id,
+                        trainerId: val === "__none__" ? null : val,
+                      })
+                    }
                   >
-                    {member.profileComplete ? "Complete" : "Incomplete"}
-                  </Badge>
+                    <SelectTrigger className="h-7 w-36 text-xs">
+                      <SelectValue placeholder="Brak" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Brak</SelectItem>
+                      {(trainers ?? []).map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.nickname ?? t.name ?? t.id.slice(0, 8)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {member.joinedAt.slice(0, 10)}
+                <TableCell>
+                  <Select
+                    value={member.clubPlaceId ?? "__none__"}
+                    onValueChange={(val) =>
+                      assignClubPlace.mutate({
+                        userId: member.id,
+                        clubPlaceId: val === "__none__" ? null : val,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="h-7 w-36 text-xs">
+                      <SelectValue placeholder="Brak" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Brak</SelectItem>
+                      {(clubPlaces ?? []).map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </TableCell>
                 <TableCell className="text-right">
                   <Switch
@@ -197,11 +266,45 @@ function MembersPage() {
                     }
                   />
                 </TableCell>
+                {isAdmin && (
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setDeleteTarget({ id: member.id, name: member.name ?? member.nickname })}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usuń konto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć konto{" "}
+              <span className="font-semibold">{deleteTarget?.name ?? "tego uczestnika"}</span>?
+              Operacja jest nieodwracalna — wszystkie sesje treningowe zostaną usunięte.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && deleteAccount.mutate({ memberId: deleteTarget.id })}
+            >
+              Usuń konto
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

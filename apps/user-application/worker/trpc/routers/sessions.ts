@@ -6,6 +6,7 @@ import {
   getMemberStats,
   getWeeklyPointsHistory,
   insertSession,
+  resubmitSession,
 } from "@repo/data-ops/queries/sessions";
 import { SUIT_MULTIPLIERS } from "@repo/data-ops/utils/suit-multipliers";
 
@@ -45,7 +46,7 @@ export const sessionsRoutes = t.router({
       if (!suitSize) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Please set your suit size in your profile before logging sessions.",
+          message: "Trener musi najpierw ustawić Twój rozmiar kombinezonu.",
         });
       }
       const correctedPoints = input.rawPoints * SUIT_MULTIPLIERS[suitSize];
@@ -56,9 +57,17 @@ export const sessionsRoutes = t.router({
         suitSize,
         rawPoints: input.rawPoints,
         correctedPoints,
+        status: "pending",
         createdBy: ctx.userInfo.userId,
         notes: input.notes ?? null,
       });
       return { correctedPoints };
+    }),
+
+  resubmitSession: t.procedure
+    .input(z.object({ sessionId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await resubmitSession(input.sessionId, ctx.userInfo.userId);
+      return { success: true };
     }),
 });

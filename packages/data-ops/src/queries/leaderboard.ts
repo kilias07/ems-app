@@ -1,4 +1,4 @@
-import { and, gte, lte, sql } from "drizzle-orm";
+import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { getDb } from "../db/database";
 import { memberProfile, trainingSession } from "../db/ems-schema";
 
@@ -34,6 +34,9 @@ export async function getLeaderboard(
   const db = getDb();
   const dateFilter = buildDateFilter(period, periodKey);
 
+  const approvedFilter = eq(trainingSession.status, "approved");
+  const combinedFilter = dateFilter ? and(approvedFilter, dateFilter) : approvedFilter;
+
   const rows = await db
     .select({
       memberId: trainingSession.memberId,
@@ -41,7 +44,7 @@ export async function getLeaderboard(
       sessions: sql<number>`count(*)`,
     })
     .from(trainingSession)
-    .where(dateFilter)
+    .where(combinedFilter)
     .groupBy(trainingSession.memberId)
     .orderBy(sql`sum(${trainingSession.correctedPoints}) DESC`);
 

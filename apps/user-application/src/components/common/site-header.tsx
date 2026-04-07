@@ -7,13 +7,17 @@ export function SiteHeader() {
   const pathname = routerState.location.pathname;
 
   const getPageTitle = (path: string) => {
-    if (path === "/app" || path === "/app/") return "Dashboard";
-    if (path === "/app/my-sessions") return "My Sessions";
-    if (path === "/app/leaderboard") return "Leaderboard";
+    if (path === "/app" || path === "/app/") return "Panel główny";
+    if (path === "/app/my-sessions") return "Moje sesje";
+    if (path === "/app/leaderboard") return "Ranking";
+    if (path === "/app/settings") return "Ustawienia";
     if (path === "/app/admin" || path === "/app/admin/") return "Admin";
-    if (path === "/app/admin/log-session") return "Log Session";
-    if (path === "/app/admin/members") return "Members";
-    if (path === "/app/admin/import") return "Import Data";
+    if (path === "/app/admin/log-session") return "Dodaj sesję";
+    if (path === "/app/admin/members") return "Uczestnicy";
+    if (path === "/app/admin/import") return "Import danych";
+    if (path === "/app/admin/inbox") return "Skrzynka odbiorcza";
+    if (path === "/app/admin/club-places") return "Miejsca treningowe";
+    if (path === "/app/pending") return "Oczekiwanie na akceptację";
     return "EMS Studio";
   };
 

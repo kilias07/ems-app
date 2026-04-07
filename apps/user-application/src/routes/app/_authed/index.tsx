@@ -56,35 +56,35 @@ function DashboardPage() {
 
   const statCards = [
     {
-      title: "Total Sessions",
+      title: "Wszystkie sesje",
       value: stats.totalSessions,
-      description: "All time",
+      description: "Łącznie",
       icon: IconCalendar,
       iconClass: "text-muted-foreground",
     },
     {
-      title: "Total Points",
+      title: "Łączne punkty",
       value: stats.totalPoints.toFixed(0),
-      description: "Corrected points",
+      description: "Punkty skorygowane",
       icon: IconBolt,
-      iconClass: "text-yellow-500",
-      suffix: "pts",
+      iconClass: "text-primary",
+      suffix: "pkt",
     },
     {
-      title: "This Week",
+      title: "Ten tydzień",
       value: stats.weekSessions,
-      description: "Sessions this week",
+      description: "Sesje w tym tygodniu",
       icon: IconFlame,
       iconClass: "text-orange-500",
-      suffix: "sessions",
+      suffix: "sesje",
     },
     {
-      title: "This Month",
+      title: "Ten miesiąc",
       value: stats.monthPoints.toFixed(0),
-      description: "Corrected points",
+      description: "Punkty skorygowane",
       icon: IconTrophy,
       iconClass: "text-blue-500",
-      suffix: "pts",
+      suffix: "pkt",
     },
   ];
 
@@ -94,16 +94,16 @@ function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Welcome back, {profile.nickname}
+            Witaj ponownie, {profile.nickname}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Here's your EMS training overview.
+            Oto przegląd Twoich treningów EMS.
           </p>
         </div>
         {myRank && (
           <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-sm">
-            <IconTrophy className="size-4 text-yellow-500" />
-            All-Time Rank #{myRank.rank}
+            <IconTrophy className="size-4 text-primary" />
+            Ranking ogólny #{myRank.rank}
           </Badge>
         )}
       </div>
@@ -140,9 +140,9 @@ function DashboardPage() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <IconChartBar className="size-4 text-muted-foreground" />
-            <CardTitle className="text-base">Weekly Points</CardTitle>
+            <CardTitle className="text-base">Punkty tygodniowe</CardTitle>
           </div>
-          <CardDescription>Your corrected points over the last 8 weeks</CardDescription>
+          <CardDescription>Twoje skorygowane punkty z ostatnich 8 tygodni</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-end gap-2 h-40">
@@ -161,7 +161,7 @@ function DashboardPage() {
                     <div
                       className={`w-full rounded-t transition-all ${
                         isCurrent
-                          ? "bg-yellow-400"
+                          ? "bg-primary"
                           : "bg-primary/30 hover:bg-primary/50"
                       }`}
                       style={{ height: `${Math.max(pct, 2)}%` }}

@@ -11,15 +11,19 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSetupProfileRouteImport } from './routes/app/setup-profile'
+import { Route as AppPendingRouteImport } from './routes/app/pending'
 import { Route as AppAuthedRouteImport } from './routes/app/_authed'
 import { Route as AppAuthedIndexRouteImport } from './routes/app/_authed/index'
+import { Route as AppAuthedSettingsRouteImport } from './routes/app/_authed/settings'
 import { Route as AppAuthedMySessionsRouteImport } from './routes/app/_authed/my-sessions'
 import { Route as AppAuthedLeaderboardRouteImport } from './routes/app/_authed/leaderboard'
 import { Route as AppAuthedAdminRouteImport } from './routes/app/_authed/admin'
 import { Route as AppAuthedAdminIndexRouteImport } from './routes/app/_authed/admin/index'
 import { Route as AppAuthedAdminMembersRouteImport } from './routes/app/_authed/admin/members'
 import { Route as AppAuthedAdminLogSessionRouteImport } from './routes/app/_authed/admin/log-session'
+import { Route as AppAuthedAdminInboxRouteImport } from './routes/app/_authed/admin/inbox'
 import { Route as AppAuthedAdminImportRouteImport } from './routes/app/_authed/admin/import'
+import { Route as AppAuthedAdminClubPlacesRouteImport } from './routes/app/_authed/admin/club-places'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -31,6 +35,11 @@ const AppSetupProfileRoute = AppSetupProfileRouteImport.update({
   path: '/app/setup-profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppPendingRoute = AppPendingRouteImport.update({
+  id: '/app/pending',
+  path: '/app/pending',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppAuthedRoute = AppAuthedRouteImport.update({
   id: '/app/_authed',
   path: '/app',
@@ -39,6 +48,11 @@ const AppAuthedRoute = AppAuthedRouteImport.update({
 const AppAuthedIndexRoute = AppAuthedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppAuthedRoute,
+} as any)
+const AppAuthedSettingsRoute = AppAuthedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AppAuthedRoute,
 } as any)
 const AppAuthedMySessionsRoute = AppAuthedMySessionsRouteImport.update({
@@ -72,32 +86,51 @@ const AppAuthedAdminLogSessionRoute =
     path: '/log-session',
     getParentRoute: () => AppAuthedAdminRoute,
   } as any)
+const AppAuthedAdminInboxRoute = AppAuthedAdminInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AppAuthedAdminRoute,
+} as any)
 const AppAuthedAdminImportRoute = AppAuthedAdminImportRouteImport.update({
   id: '/import',
   path: '/import',
   getParentRoute: () => AppAuthedAdminRoute,
 } as any)
+const AppAuthedAdminClubPlacesRoute =
+  AppAuthedAdminClubPlacesRouteImport.update({
+    id: '/club-places',
+    path: '/club-places',
+    getParentRoute: () => AppAuthedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppAuthedRouteWithChildren
+  '/app/pending': typeof AppPendingRoute
   '/app/setup-profile': typeof AppSetupProfileRoute
   '/app/admin': typeof AppAuthedAdminRouteWithChildren
   '/app/leaderboard': typeof AppAuthedLeaderboardRoute
   '/app/my-sessions': typeof AppAuthedMySessionsRoute
+  '/app/settings': typeof AppAuthedSettingsRoute
   '/app/': typeof AppAuthedIndexRoute
+  '/app/admin/club-places': typeof AppAuthedAdminClubPlacesRoute
   '/app/admin/import': typeof AppAuthedAdminImportRoute
+  '/app/admin/inbox': typeof AppAuthedAdminInboxRoute
   '/app/admin/log-session': typeof AppAuthedAdminLogSessionRoute
   '/app/admin/members': typeof AppAuthedAdminMembersRoute
   '/app/admin/': typeof AppAuthedAdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app/pending': typeof AppPendingRoute
   '/app/setup-profile': typeof AppSetupProfileRoute
   '/app/leaderboard': typeof AppAuthedLeaderboardRoute
   '/app/my-sessions': typeof AppAuthedMySessionsRoute
+  '/app/settings': typeof AppAuthedSettingsRoute
   '/app': typeof AppAuthedIndexRoute
+  '/app/admin/club-places': typeof AppAuthedAdminClubPlacesRoute
   '/app/admin/import': typeof AppAuthedAdminImportRoute
+  '/app/admin/inbox': typeof AppAuthedAdminInboxRoute
   '/app/admin/log-session': typeof AppAuthedAdminLogSessionRoute
   '/app/admin/members': typeof AppAuthedAdminMembersRoute
   '/app/admin': typeof AppAuthedAdminIndexRoute
@@ -106,12 +139,16 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app/_authed': typeof AppAuthedRouteWithChildren
+  '/app/pending': typeof AppPendingRoute
   '/app/setup-profile': typeof AppSetupProfileRoute
   '/app/_authed/admin': typeof AppAuthedAdminRouteWithChildren
   '/app/_authed/leaderboard': typeof AppAuthedLeaderboardRoute
   '/app/_authed/my-sessions': typeof AppAuthedMySessionsRoute
+  '/app/_authed/settings': typeof AppAuthedSettingsRoute
   '/app/_authed/': typeof AppAuthedIndexRoute
+  '/app/_authed/admin/club-places': typeof AppAuthedAdminClubPlacesRoute
   '/app/_authed/admin/import': typeof AppAuthedAdminImportRoute
+  '/app/_authed/admin/inbox': typeof AppAuthedAdminInboxRoute
   '/app/_authed/admin/log-session': typeof AppAuthedAdminLogSessionRoute
   '/app/_authed/admin/members': typeof AppAuthedAdminMembersRoute
   '/app/_authed/admin/': typeof AppAuthedAdminIndexRoute
@@ -121,23 +158,31 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/app/pending'
     | '/app/setup-profile'
     | '/app/admin'
     | '/app/leaderboard'
     | '/app/my-sessions'
+    | '/app/settings'
     | '/app/'
+    | '/app/admin/club-places'
     | '/app/admin/import'
+    | '/app/admin/inbox'
     | '/app/admin/log-session'
     | '/app/admin/members'
     | '/app/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/app/pending'
     | '/app/setup-profile'
     | '/app/leaderboard'
     | '/app/my-sessions'
+    | '/app/settings'
     | '/app'
+    | '/app/admin/club-places'
     | '/app/admin/import'
+    | '/app/admin/inbox'
     | '/app/admin/log-session'
     | '/app/admin/members'
     | '/app/admin'
@@ -145,12 +190,16 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/app/_authed'
+    | '/app/pending'
     | '/app/setup-profile'
     | '/app/_authed/admin'
     | '/app/_authed/leaderboard'
     | '/app/_authed/my-sessions'
+    | '/app/_authed/settings'
     | '/app/_authed/'
+    | '/app/_authed/admin/club-places'
     | '/app/_authed/admin/import'
+    | '/app/_authed/admin/inbox'
     | '/app/_authed/admin/log-session'
     | '/app/_authed/admin/members'
     | '/app/_authed/admin/'
@@ -159,6 +208,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppAuthedRoute: typeof AppAuthedRouteWithChildren
+  AppPendingRoute: typeof AppPendingRoute
   AppSetupProfileRoute: typeof AppSetupProfileRoute
 }
 
@@ -178,6 +228,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSetupProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/pending': {
+      id: '/app/pending'
+      path: '/app/pending'
+      fullPath: '/app/pending'
+      preLoaderRoute: typeof AppPendingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/_authed': {
       id: '/app/_authed'
       path: '/app'
@@ -190,6 +247,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AppAuthedIndexRouteImport
+      parentRoute: typeof AppAuthedRoute
+    }
+    '/app/_authed/settings': {
+      id: '/app/_authed/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AppAuthedSettingsRouteImport
       parentRoute: typeof AppAuthedRoute
     }
     '/app/_authed/my-sessions': {
@@ -234,6 +298,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAuthedAdminLogSessionRouteImport
       parentRoute: typeof AppAuthedAdminRoute
     }
+    '/app/_authed/admin/inbox': {
+      id: '/app/_authed/admin/inbox'
+      path: '/inbox'
+      fullPath: '/app/admin/inbox'
+      preLoaderRoute: typeof AppAuthedAdminInboxRouteImport
+      parentRoute: typeof AppAuthedAdminRoute
+    }
     '/app/_authed/admin/import': {
       id: '/app/_authed/admin/import'
       path: '/import'
@@ -241,18 +312,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAuthedAdminImportRouteImport
       parentRoute: typeof AppAuthedAdminRoute
     }
+    '/app/_authed/admin/club-places': {
+      id: '/app/_authed/admin/club-places'
+      path: '/club-places'
+      fullPath: '/app/admin/club-places'
+      preLoaderRoute: typeof AppAuthedAdminClubPlacesRouteImport
+      parentRoute: typeof AppAuthedAdminRoute
+    }
   }
 }
 
 interface AppAuthedAdminRouteChildren {
+  AppAuthedAdminClubPlacesRoute: typeof AppAuthedAdminClubPlacesRoute
   AppAuthedAdminImportRoute: typeof AppAuthedAdminImportRoute
+  AppAuthedAdminInboxRoute: typeof AppAuthedAdminInboxRoute
   AppAuthedAdminLogSessionRoute: typeof AppAuthedAdminLogSessionRoute
   AppAuthedAdminMembersRoute: typeof AppAuthedAdminMembersRoute
   AppAuthedAdminIndexRoute: typeof AppAuthedAdminIndexRoute
 }
 
 const AppAuthedAdminRouteChildren: AppAuthedAdminRouteChildren = {
+  AppAuthedAdminClubPlacesRoute: AppAuthedAdminClubPlacesRoute,
   AppAuthedAdminImportRoute: AppAuthedAdminImportRoute,
+  AppAuthedAdminInboxRoute: AppAuthedAdminInboxRoute,
   AppAuthedAdminLogSessionRoute: AppAuthedAdminLogSessionRoute,
   AppAuthedAdminMembersRoute: AppAuthedAdminMembersRoute,
   AppAuthedAdminIndexRoute: AppAuthedAdminIndexRoute,
@@ -266,6 +348,7 @@ interface AppAuthedRouteChildren {
   AppAuthedAdminRoute: typeof AppAuthedAdminRouteWithChildren
   AppAuthedLeaderboardRoute: typeof AppAuthedLeaderboardRoute
   AppAuthedMySessionsRoute: typeof AppAuthedMySessionsRoute
+  AppAuthedSettingsRoute: typeof AppAuthedSettingsRoute
   AppAuthedIndexRoute: typeof AppAuthedIndexRoute
 }
 
@@ -273,6 +356,7 @@ const AppAuthedRouteChildren: AppAuthedRouteChildren = {
   AppAuthedAdminRoute: AppAuthedAdminRouteWithChildren,
   AppAuthedLeaderboardRoute: AppAuthedLeaderboardRoute,
   AppAuthedMySessionsRoute: AppAuthedMySessionsRoute,
+  AppAuthedSettingsRoute: AppAuthedSettingsRoute,
   AppAuthedIndexRoute: AppAuthedIndexRoute,
 }
 
@@ -283,6 +367,7 @@ const AppAuthedRouteWithChildren = AppAuthedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppAuthedRoute: AppAuthedRouteWithChildren,
+  AppPendingRoute: AppPendingRoute,
   AppSetupProfileRoute: AppSetupProfileRoute,
 }
 export const routeTree = rootRouteImport

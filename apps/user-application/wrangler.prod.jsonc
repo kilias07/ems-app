@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "user-application",
-  "main": "worker/index.ts",
+  "main": "dist/user_application/index.js",
   "compatibility_date": "2025-07-11",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {

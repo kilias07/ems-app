@@ -4,16 +4,20 @@ import { getDb } from "./db/database";
 import { account, session, user, verification } from "./drizzle-out/auth-schema";
 import { createMemberProfile } from "./queries/members";
 
-let auth: ReturnType<typeof betterAuth>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let auth: any;
+
+const ADMIN_EMAILS = ["arekjuve@googlemail.com", "kamilkiliasinski@gmail.com"];
 
 export function createBetterAuth(
   database: NonNullable<Parameters<typeof betterAuth>[0]>["database"],
   google?: { clientId: string; clientSecret: string },
-): ReturnType<typeof betterAuth> {
+) {
   return betterAuth({
     database,
     emailAndPassword: {
-      enabled: false,
+      enabled: true,
+      requireEmailVerification: false,
     },
     socialProviders: {
       google: {
@@ -21,13 +25,22 @@ export function createBetterAuth(
         clientSecret: google?.clientSecret ?? "",
       },
     },
+    account: {
+      accountLinking: {
+        enabled: true,
+        trustedProviders: ["google"],
+      },
+    },
     databaseHooks: {
       user: {
         create: {
           after: async (newUser) => {
+            const isAdmin = ADMIN_EMAILS.includes(newUser.email);
             await createMemberProfile({
               id: newUser.id,
               avatarUrl: newUser.image ?? null,
+              role: isAdmin ? "admin" : "user",
+              status: isAdmin ? "approved" : "pending",
             });
           },
         },
@@ -36,9 +49,7 @@ export function createBetterAuth(
   });
 }
 
-export function getAuth(
-  google: { clientId: string; clientSecret: string },
-): ReturnType<typeof betterAuth> {
+export function getAuth(google: { clientId: string; clientSecret: string }) {
   if (auth) return auth;
 
   auth = createBetterAuth(

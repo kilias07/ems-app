@@ -1,55 +1,102 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { IconPlus, IconUsers, IconFileImport } from "@tabler/icons-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  IconPlus,
+  IconUsers,
+  IconFileImport,
+  IconInbox,
+  IconMapPin,
+} from "@tabler/icons-react";
 import { trpc } from "@/router";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/_authed/admin/")({
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.prefetchQuery(
+        context.trpc.admin.getPendingMembers.queryOptions(),
+      ),
+      context.queryClient.prefetchQuery(
+        context.trpc.admin.getPendingSessions.queryOptions(),
+      ),
+    ]);
+  },
   component: AdminOverview,
 });
 
 function AdminOverview() {
   const { data: profile } = useQuery(trpc.profile.getMyProfile.queryOptions());
+  const { data: pendingMembers } = useQuery(trpc.admin.getPendingMembers.queryOptions());
+  const { data: pendingSessions } = useQuery(trpc.admin.getPendingSessions.queryOptions());
+
+  const inboxCount = (pendingMembers?.length ?? 0) + (pendingSessions?.length ?? 0);
+  const isAdmin = profile?.role === "admin";
 
   const trainerCards = [
     {
-      title: "Log Session",
-      desc: "Record a new EMS training session for a member.",
-      icon: <IconPlus className="size-8 text-yellow-400" />,
-      to: "/app/admin/log-session" as const,
+      title: "Skrzynka odbiorcza",
+      desc: "Przeglądaj i zatwierdzaj wnioski uczestników.",
+      icon: <IconInbox className="size-8 text-primary" />,
+      to: "/app/admin/inbox" as const,
+      badge: inboxCount > 0 ? inboxCount : null,
     },
     {
-      title: "Members",
-      desc: "View and manage member profiles.",
-      icon: <IconUsers className="size-8 text-blue-400" />,
+      title: "Dodaj sesję",
+      desc: "Zarejestruj nową sesję treningową EMS dla uczestnika.",
+      icon: <IconPlus className="size-8 text-primary" />,
+      to: "/app/admin/log-session" as const,
+      badge: null,
+    },
+    {
+      title: "Uczestnicy",
+      desc: "Przeglądaj i zarządzaj profilami uczestników.",
+      icon: <IconUsers className="size-8 text-primary" />,
       to: "/app/admin/members" as const,
+      badge: null,
+    },
+    {
+      title: "Miejsca treningowe",
+      desc: "Zarządzaj lokalizacjami klubu EMS.",
+      icon: <IconMapPin className="size-8 text-primary" />,
+      to: "/app/admin/club-places" as const,
+      badge: null,
     },
   ];
 
   const adminCards = [
     {
-      title: "Import Data",
-      desc: "Bulk import historical CSV/TSV session data.",
-      icon: <IconFileImport className="size-8 text-green-400" />,
+      title: "Import danych",
+      desc: "Masowy import historycznych danych sesji (CSV/TSV).",
+      icon: <IconFileImport className="size-8 text-primary" />,
       to: "/app/admin/import" as const,
+      badge: null,
     },
   ];
 
-  const isAdmin = profile?.role === "admin";
+  const allCards = isAdmin ? [...trainerCards, ...adminCards] : trainerCards;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">
-        {isAdmin ? "Admin Panel" : "Trainer Panel"}
+        {isAdmin ? "Panel admina" : "Panel trenera"}
       </h1>
       <div className="grid md:grid-cols-3 gap-4">
-        {trainerCards.map((c) => (
+        {allCards.map((c) => (
           <Link key={c.title} to={c.to}>
             <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-              <CardHeader>
+              <CardHeader className="relative">
                 {c.icon}
                 <CardTitle className="text-lg">{c.title}</CardTitle>
+                {c.badge != null && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute top-3 right-3 size-6 justify-center p-0"
+                  >
+                    {c.badge}
+                  </Badge>
+                )}
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">{c.desc}</p>
@@ -57,20 +104,6 @@ function AdminOverview() {
             </Card>
           </Link>
         ))}
-        {isAdmin &&
-          adminCards.map((c) => (
-            <Link key={c.title} to={c.to}>
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-                <CardHeader>
-                  {c.icon}
-                  <CardTitle className="text-lg">{c.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{c.desc}</p>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
       </div>
     </div>
   );

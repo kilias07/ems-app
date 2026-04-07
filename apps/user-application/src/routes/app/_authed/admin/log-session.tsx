@@ -68,7 +68,7 @@ function LogSessionPage() {
     trpc.admin.logSession.mutationOptions({
       onSuccess: (data) => {
         toast.success(
-          `Session logged! Corrected points: ${data.correctedPoints.toFixed(1)}`,
+          `Sesja dodana! Punkty skorygowane: ${data.correctedPoints.toFixed(1)}`,
         );
         setMemberId("");
         setSessionDate(today);
@@ -99,17 +99,17 @@ function LogSessionPage() {
 
   return (
     <div className="container mx-auto p-6 max-w-lg space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Log Session</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Dodaj sesję</h1>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">New Session</CardTitle>
+          <CardTitle className="text-base">Nowa sesja</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Member picker */}
             <div className="space-y-1">
-              <Label>Member</Label>
+              <Label>Uczestnik</Label>
               <Popover open={memberOpen} onOpenChange={setMemberOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -117,15 +117,15 @@ function LogSessionPage() {
                     role="combobox"
                     className="w-full justify-between"
                   >
-                    {selectedMember?.nickname ?? "Select member…"}
+                    {selectedMember?.nickname ?? "Wybierz uczestnika…"}
                     <ChevronsUpDown className="ml-2 size-4 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full p-0">
                   <Command>
-                    <CommandInput placeholder="Search nickname…" />
+                    <CommandInput placeholder="Szukaj pseudonimu…" />
                     <CommandList>
-                      <CommandEmpty>No member found.</CommandEmpty>
+                      <CommandEmpty>Nie znaleziono uczestnika.</CommandEmpty>
                       <CommandGroup>
                         {activeMembers.map((m) => (
                           <CommandItem
@@ -154,7 +154,7 @@ function LogSessionPage() {
 
             {/* Date */}
             <div className="space-y-1">
-              <Label>Session Date</Label>
+              <Label>Data sesji</Label>
               <Input
                 type="date"
                 value={sessionDate}
@@ -165,10 +165,10 @@ function LogSessionPage() {
 
             {/* Suit size */}
             <div className="space-y-1">
-              <Label>Suit Size</Label>
+              <Label>Rozmiar kombinezonu</Label>
               <Select value={suitSize} onValueChange={setSuitSize}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select suit…" />
+                  <SelectValue placeholder="Wybierz rozmiar…" />
                 </SelectTrigger>
                 <SelectContent>
                   {SUIT_SIZES.map((s) => (
@@ -182,11 +182,11 @@ function LogSessionPage() {
 
             {/* Raw points */}
             <div className="space-y-1">
-              <Label>Raw Points</Label>
+              <Label>Surowe punkty</Label>
               <Input
                 type="number"
                 min="1"
-                placeholder="e.g. 850"
+                placeholder="np. 850"
                 value={rawPoints}
                 onChange={(e) => setRawPoints(e.target.value)}
                 required
@@ -194,7 +194,7 @@ function LogSessionPage() {
               {correctedPreview && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
-                    Corrected points:
+                    Punkty skorygowane:
                   </span>
                   <Badge variant="secondary" className="font-mono">
                     {correctedPreview}
@@ -205,9 +205,9 @@ function LogSessionPage() {
 
             {/* Notes */}
             <div className="space-y-1">
-              <Label>Notes (optional)</Label>
+              <Label>Notatki (opcjonalnie)</Label>
               <Textarea
-                placeholder="Any observations…"
+                placeholder="Dowolne obserwacje…"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
@@ -224,7 +224,7 @@ function LogSessionPage() {
                 !rawPoints
               }
             >
-              {logSession.isPending ? "Saving…" : "Log Session"}
+              {logSession.isPending ? "Zapisywanie…" : "Dodaj sesję"}
             </Button>
           </form>
         </CardContent>
