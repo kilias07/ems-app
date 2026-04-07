@@ -379,21 +379,21 @@ function NotesSheet({
   );
 
   return (
-    <Sheet open={!!userId} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent className="flex flex-col gap-4 overflow-y-auto">
+    <Sheet open={!!userId} onOpenChange={(open) => { if (!open) { setContent(""); onClose(); } }}>
+      <SheetContent className="flex flex-col gap-6 overflow-y-auto w-full sm:max-w-lg p-8">
         <SheetHeader>
-          <SheetTitle>Notatki — {userName ?? "uczestnik"}</SheetTitle>
+          <SheetTitle className="text-xl">Notatki — {userName ?? "uczestnik"}</SheetTitle>
         </SheetHeader>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <Textarea
             placeholder="Napisz notatkę..."
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            rows={3}
+            rows={4}
+            className="resize-none"
           />
           <Button
-            size="sm"
             disabled={!content.trim() || addNote.isPending}
             onClick={() => userId && addNote.mutate({ userId, content: content.trim() })}
           >
@@ -401,12 +401,12 @@ function NotesSheet({
           </Button>
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {!notes || notes.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">Brak notatek.</p>
+            <p className="text-sm text-muted-foreground text-center py-8">Brak notatek.</p>
           ) : (
             notes.map((note) => (
-              <div key={note.id} className="rounded-lg border bg-card p-3 space-y-1">
+              <div key={note.id} className="rounded-lg border bg-card p-4 space-y-2">
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{note.content}</p>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -417,11 +417,11 @@ function NotesSheet({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 text-destructive hover:text-destructive"
+                    className="h-7 w-7 text-destructive hover:text-destructive"
                     disabled={deleteNote.isPending}
                     onClick={() => deleteNote.mutate({ noteId: note.id })}
                   >
-                    <Trash2 className="size-3" />
+                    <Trash2 className="size-4" />
                   </Button>
                 </div>
               </div>

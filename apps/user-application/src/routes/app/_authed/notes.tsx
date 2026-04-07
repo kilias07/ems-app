@@ -15,7 +15,7 @@ export const Route = createFileRoute("/app/_authed/notes")({
 });
 
 function NotesPage() {
-  const { data: notes } = useQuery(trpc.profile.getMyNotes.queryOptions());
+  const { data: notes } = useQuery({ ...trpc.profile.getMyNotes.queryOptions(), staleTime: 0 });
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-2xl">

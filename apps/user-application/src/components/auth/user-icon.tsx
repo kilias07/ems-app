@@ -23,6 +23,7 @@ import { useState } from "react";
 import { authClient } from "./client";
 import { trpc } from "@/router";
 import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 type UserProfilePopupProps = {
   data: Awaited<ReturnType<typeof authClient.useSession>>["data"];
@@ -49,6 +50,7 @@ function UserProfilePopup({ data, children }: UserProfilePopupProps) {
       onSuccess: () => {
         authClient.signOut({ fetchOptions: { onSuccess: () => { window.location.href = "/"; } } });
       },
+      onError: (err) => toast.error(err.message),
     }),
   );
 
@@ -57,6 +59,7 @@ function UserProfilePopup({ data, children }: UserProfilePopupProps) {
       onSuccess: () => {
         authClient.signOut({ fetchOptions: { onSuccess: () => { window.location.href = "/"; } } });
       },
+      onError: (err) => toast.error(err.message),
     }),
   );
 
