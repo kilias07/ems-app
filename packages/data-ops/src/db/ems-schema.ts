@@ -28,6 +28,18 @@ export const memberProfile = sqliteTable("member_profile", {
     .default(sql`(datetime('now'))`),
 });
 
+export const userNote = sqliteTable("user_note", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => memberProfile.id, { onDelete: "cascade" }),
+  authorId: text("author_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
 export const trainingSession = sqliteTable("training_session", {
   id: text("id").primaryKey(),
   memberId: text("member_id")

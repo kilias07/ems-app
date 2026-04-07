@@ -15,6 +15,7 @@ import { Route as AppPendingRouteImport } from './routes/app/pending'
 import { Route as AppAuthedRouteImport } from './routes/app/_authed'
 import { Route as AppAuthedIndexRouteImport } from './routes/app/_authed/index'
 import { Route as AppAuthedSettingsRouteImport } from './routes/app/_authed/settings'
+import { Route as AppAuthedNotesRouteImport } from './routes/app/_authed/notes'
 import { Route as AppAuthedMySessionsRouteImport } from './routes/app/_authed/my-sessions'
 import { Route as AppAuthedLeaderboardRouteImport } from './routes/app/_authed/leaderboard'
 import { Route as AppAuthedAdminRouteImport } from './routes/app/_authed/admin'
@@ -53,6 +54,11 @@ const AppAuthedIndexRoute = AppAuthedIndexRouteImport.update({
 const AppAuthedSettingsRoute = AppAuthedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppAuthedRoute,
+} as any)
+const AppAuthedNotesRoute = AppAuthedNotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
   getParentRoute: () => AppAuthedRoute,
 } as any)
 const AppAuthedMySessionsRoute = AppAuthedMySessionsRouteImport.update({
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/app/admin': typeof AppAuthedAdminRouteWithChildren
   '/app/leaderboard': typeof AppAuthedLeaderboardRoute
   '/app/my-sessions': typeof AppAuthedMySessionsRoute
+  '/app/notes': typeof AppAuthedNotesRoute
   '/app/settings': typeof AppAuthedSettingsRoute
   '/app/': typeof AppAuthedIndexRoute
   '/app/admin/club-places': typeof AppAuthedAdminClubPlacesRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/app/setup-profile': typeof AppSetupProfileRoute
   '/app/leaderboard': typeof AppAuthedLeaderboardRoute
   '/app/my-sessions': typeof AppAuthedMySessionsRoute
+  '/app/notes': typeof AppAuthedNotesRoute
   '/app/settings': typeof AppAuthedSettingsRoute
   '/app': typeof AppAuthedIndexRoute
   '/app/admin/club-places': typeof AppAuthedAdminClubPlacesRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/app/_authed/admin': typeof AppAuthedAdminRouteWithChildren
   '/app/_authed/leaderboard': typeof AppAuthedLeaderboardRoute
   '/app/_authed/my-sessions': typeof AppAuthedMySessionsRoute
+  '/app/_authed/notes': typeof AppAuthedNotesRoute
   '/app/_authed/settings': typeof AppAuthedSettingsRoute
   '/app/_authed/': typeof AppAuthedIndexRoute
   '/app/_authed/admin/club-places': typeof AppAuthedAdminClubPlacesRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/app/admin'
     | '/app/leaderboard'
     | '/app/my-sessions'
+    | '/app/notes'
     | '/app/settings'
     | '/app/'
     | '/app/admin/club-places'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/app/setup-profile'
     | '/app/leaderboard'
     | '/app/my-sessions'
+    | '/app/notes'
     | '/app/settings'
     | '/app'
     | '/app/admin/club-places'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/app/_authed/admin'
     | '/app/_authed/leaderboard'
     | '/app/_authed/my-sessions'
+    | '/app/_authed/notes'
     | '/app/_authed/settings'
     | '/app/_authed/'
     | '/app/_authed/admin/club-places'
@@ -254,6 +266,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/app/settings'
       preLoaderRoute: typeof AppAuthedSettingsRouteImport
+      parentRoute: typeof AppAuthedRoute
+    }
+    '/app/_authed/notes': {
+      id: '/app/_authed/notes'
+      path: '/notes'
+      fullPath: '/app/notes'
+      preLoaderRoute: typeof AppAuthedNotesRouteImport
       parentRoute: typeof AppAuthedRoute
     }
     '/app/_authed/my-sessions': {
@@ -348,6 +367,7 @@ interface AppAuthedRouteChildren {
   AppAuthedAdminRoute: typeof AppAuthedAdminRouteWithChildren
   AppAuthedLeaderboardRoute: typeof AppAuthedLeaderboardRoute
   AppAuthedMySessionsRoute: typeof AppAuthedMySessionsRoute
+  AppAuthedNotesRoute: typeof AppAuthedNotesRoute
   AppAuthedSettingsRoute: typeof AppAuthedSettingsRoute
   AppAuthedIndexRoute: typeof AppAuthedIndexRoute
 }
@@ -356,6 +376,7 @@ const AppAuthedRouteChildren: AppAuthedRouteChildren = {
   AppAuthedAdminRoute: AppAuthedAdminRouteWithChildren,
   AppAuthedLeaderboardRoute: AppAuthedLeaderboardRoute,
   AppAuthedMySessionsRoute: AppAuthedMySessionsRoute,
+  AppAuthedNotesRoute: AppAuthedNotesRoute,
   AppAuthedSettingsRoute: AppAuthedSettingsRoute,
   AppAuthedIndexRoute: AppAuthedIndexRoute,
 }

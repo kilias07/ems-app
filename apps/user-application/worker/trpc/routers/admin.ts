@@ -33,6 +33,7 @@ import {
   deleteClubPlace,
 } from "@repo/data-ops/queries/club-places";
 import { SUIT_MULTIPLIERS } from "@repo/data-ops/utils/suit-multipliers";
+import { getNotesForUser, addNote, deleteNote } from "@repo/data-ops/queries/notes";
 
 const suitSizeSchema = z.enum(["R0", "R1", "RW2", "R2", "R3", "R4", "R5"]);
 
@@ -239,6 +240,28 @@ export const adminRoutes = t.router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Nie możesz usunąć własnego konta." });
       }
       await deleteAccount(input.memberId);
+      return { success: true };
+    }),
+
+  // ── Notes ─────────────────────────────────────────────────────────────────
+
+  getNotesForUser: trainerProcedure
+    .input(z.object({ userId: z.string() }))
+    .query(async ({ input }) => {
+      return getNotesForUser(input.userId);
+    }),
+
+  addNote: trainerProcedure
+    .input(z.object({ userId: z.string(), content: z.string().min(1).max(2000) }))
+    .mutation(async ({ ctx, input }) => {
+      await addNote(genId(), input.userId, ctx.userInfo.userId, input.content);
+      return { success: true };
+    }),
+
+  deleteNote: trainerProcedure
+    .input(z.object({ noteId: z.string() }))
+    .mutation(async ({ input }) => {
+      await deleteNote(input.noteId);
       return { success: true };
     }),
 

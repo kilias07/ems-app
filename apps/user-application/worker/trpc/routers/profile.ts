@@ -8,6 +8,7 @@ import {
   deleteAccount,
   setMemberActive,
 } from "@repo/data-ops/queries/members";
+import { getNotesForUser } from "@repo/data-ops/queries/notes";
 import { getUserById } from "@repo/data-ops/queries/auth-user";
 import { sendEmail } from "@/worker/lib/email";
 import { welcomeEmailHtml } from "@/worker/lib/email-templates";
@@ -70,6 +71,10 @@ export const profileRoutes = t.router({
       await updateSuitSize(ctx.userInfo.userId, input.suitSize);
       return { success: true };
     }),
+
+  getMyNotes: t.procedure.query(async ({ ctx }) => {
+    return getNotesForUser(ctx.userInfo.userId);
+  }),
 
   deleteMyAccount: t.procedure.mutation(async ({ ctx }) => {
     await deleteAccount(ctx.userInfo.userId);

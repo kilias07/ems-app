@@ -8,6 +8,7 @@ import {
   IconSettings,
   IconInbox,
   IconMapPin,
+  IconNotes,
 } from "@tabler/icons-react";
 
 import {
@@ -47,6 +48,7 @@ export function NavMain() {
     { title: "Panel główny", to: "/app/", icon: IconDashboard },
     { title: "Moje sesje", to: "/app/my-sessions", icon: IconHistory },
     { title: "Ranking", to: "/app/leaderboard", icon: IconTrophy },
+    { title: "Notatki", to: "/app/notes", icon: IconNotes },
     { title: "Ustawienia", to: "/app/settings", icon: IconSettings },
   ];
 

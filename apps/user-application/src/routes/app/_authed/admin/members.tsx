@@ -29,9 +29,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Check, Trash2 } from "lucide-react";
+import { Check, Trash2, StickyNote } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { pl } from "date-fns/locale";
 
 export const Route = createFileRoute("/app/_authed/admin/members")({
   loader: async ({ context }) => {
@@ -72,6 +81,7 @@ function MembersPage() {
   const isAdmin = myProfile?.role === "admin";
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string | null } | null>(null);
+  const [notesTarget, setNotesTarget] = useState<{ id: string; name: string | null } | null>(null);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: trpc.admin.listMembers.queryKey() });
@@ -149,6 +159,7 @@ function MembersPage() {
               <TableHead>Trener</TableHead>
               <TableHead>Miejsce</TableHead>
               <TableHead className="text-right">Aktywny</TableHead>
+              <TableHead />
               {isAdmin && <TableHead />}
             </TableRow>
           </TableHeader>
@@ -270,6 +281,15 @@ function MembersPage() {
                     }
                   />
                 </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setNotesTarget({ id: member.id, name: member.name ?? member.nickname })}
+                  >
+                    <StickyNote className="size-4" />
+                  </Button>
+                </TableCell>
                 {isAdmin && (
                   <TableCell>
                     <Button
@@ -287,6 +307,12 @@ function MembersPage() {
           </TableBody>
         </Table>
       </div>
+
+      <NotesSheet
+        userId={notesTarget?.id ?? null}
+        userName={notesTarget?.name ?? null}
+        onClose={() => setNotesTarget(null)}
+      />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <AlertDialogContent>
@@ -310,5 +336,99 @@ function MembersPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function NotesSheet({
+  userId,
+  userName,
+  onClose,
+}: {
+  userId: string | null;
+  userName: string | null;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [content, setContent] = useState("");
+
+  const { data: notes } = useQuery({
+    ...trpc.admin.getNotesForUser.queryOptions({ userId: userId ?? "" }),
+    enabled: !!userId,
+  });
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({
+      queryKey: trpc.admin.getNotesForUser.queryKey({ userId: userId ?? "" }),
+    });
+
+  const addNote = useMutation(
+    trpc.admin.addNote.mutationOptions({
+      onSuccess: () => {
+        setContent("");
+        invalidate();
+      },
+      onError: (err) => toast.error(err.message),
+    }),
+  );
+
+  const deleteNote = useMutation(
+    trpc.admin.deleteNote.mutationOptions({
+      onSuccess: invalidate,
+      onError: (err) => toast.error(err.message),
+    }),
+  );
+
+  return (
+    <Sheet open={!!userId} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <SheetContent className="flex flex-col gap-4 overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Notatki — {userName ?? "uczestnik"}</SheetTitle>
+        </SheetHeader>
+
+        <div className="flex flex-col gap-2">
+          <Textarea
+            placeholder="Napisz notatkę..."
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            rows={3}
+          />
+          <Button
+            size="sm"
+            disabled={!content.trim() || addNote.isPending}
+            onClick={() => userId && addNote.mutate({ userId, content: content.trim() })}
+          >
+            Dodaj notatkę
+          </Button>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {!notes || notes.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Brak notatek.</p>
+          ) : (
+            notes.map((note) => (
+              <div key={note.id} className="rounded-lg border bg-card p-3 space-y-1">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{note.content}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{note.authorNickname ?? "Trener"}</span>
+                    <span>·</span>
+                    <span>{format(parseISO(note.createdAt), "d MMM yyyy, HH:mm", { locale: pl })}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-destructive hover:text-destructive"
+                    disabled={deleteNote.isPending}
+                    onClick={() => deleteNote.mutate({ noteId: note.id })}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

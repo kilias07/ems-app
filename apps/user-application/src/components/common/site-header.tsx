@@ -11,6 +11,7 @@ export function SiteHeader() {
     if (path === "/app/my-sessions") return "Moje sesje";
     if (path === "/app/leaderboard") return "Ranking";
     if (path === "/app/settings") return "Ustawienia";
+    if (path === "/app/notes") return "Notatki trenera";
     if (path === "/app/admin" || path === "/app/admin/") return "Admin";
     if (path === "/app/admin/log-session") return "Dodaj sesję";
     if (path === "/app/admin/members") return "Uczestnicy";
