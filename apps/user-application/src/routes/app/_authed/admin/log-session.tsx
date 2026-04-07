@@ -7,13 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -31,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ChevronsUpDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SUIT_MULTIPLIERS, SUIT_SIZES } from "@repo/data-ops/utils/suit-multipliers";
+import { SUIT_MULTIPLIERS } from "@repo/data-ops/utils/suit-multipliers";
 
 export const Route = createFileRoute("/app/_authed/admin/log-session")({
   loader: async ({ context }) => {
@@ -51,17 +44,19 @@ function LogSessionPage() {
 
   const [memberId, setMemberId] = useState("");
   const [sessionDate, setSessionDate] = useState(today);
-  const [suitSize, setSuitSize] = useState("");
   const [rawPoints, setRawPoints] = useState("");
   const [notes, setNotes] = useState("");
   const [memberOpen, setMemberOpen] = useState(false);
+
+  const activeMembers = members.filter((m) => m.isActive === 1 && m.nickname);
+  const selectedMember = activeMembers.find((m) => m.id === memberId);
+  const suitSize = selectedMember?.suitSize ?? null;
 
   const correctedPreview = useMemo(() => {
     if (!suitSize || !rawPoints) return null;
     const pts = parseInt(rawPoints);
     if (isNaN(pts) || pts <= 0) return null;
-    const multiplier = SUIT_MULTIPLIERS[suitSize];
-    return (pts * multiplier).toFixed(1);
+    return (pts * SUIT_MULTIPLIERS[suitSize]).toFixed(1);
   }, [suitSize, rawPoints]);
 
   const logSession = useMutation(
@@ -72,7 +67,6 @@ function LogSessionPage() {
         );
         setMemberId("");
         setSessionDate(today);
-        setSuitSize("");
         setRawPoints("");
         setNotes("");
       },
@@ -82,16 +76,12 @@ function LogSessionPage() {
     }),
   );
 
-  const activeMembers = members.filter((m) => m.isActive === 1 && m.nickname);
-  const selectedMember = activeMembers.find((m) => m.id === memberId);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!memberId || !suitSize || !rawPoints) return;
+    if (!memberId || !rawPoints) return;
     logSession.mutate({
       memberId,
       sessionDate,
-      suitSize: suitSize as any,
       rawPoints: parseInt(rawPoints),
       notes: notes || undefined,
     });
@@ -143,6 +133,11 @@ function LogSessionPage() {
                               )}
                             />
                             {m.nickname}
+                            {m.suitSize && (
+                              <span className="ml-auto text-xs text-muted-foreground font-mono">
+                                {m.suitSize}
+                              </span>
+                            )}
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -151,6 +146,20 @@ function LogSessionPage() {
                 </PopoverContent>
               </Popover>
             </div>
+
+            {/* Suit size — read-only from member profile */}
+            {selectedMember && (
+              <div className="flex items-center justify-between rounded-md border px-3 py-2 bg-muted/40">
+                <span className="text-sm text-muted-foreground">Kombinezon</span>
+                {suitSize ? (
+                  <span className="font-mono font-semibold">
+                    {suitSize} <span className="text-muted-foreground font-normal text-xs">×{SUIT_MULTIPLIERS[suitSize]}</span>
+                  </span>
+                ) : (
+                  <span className="text-sm text-destructive">Brak ustawionego rozmiaru</span>
+                )}
+              </div>
+            )}
 
             {/* Date */}
             <div className="space-y-1">
@@ -161,23 +170,6 @@ function LogSessionPage() {
                 onChange={(e) => setSessionDate(e.target.value)}
                 required
               />
-            </div>
-
-            {/* Suit size */}
-            <div className="space-y-1">
-              <Label>Rozmiar kombinezonu</Label>
-              <Select value={suitSize} onValueChange={setSuitSize}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Wybierz rozmiar…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUIT_SIZES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s} (×{SUIT_MULTIPLIERS[s]})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Raw points */}

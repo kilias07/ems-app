@@ -9,7 +9,7 @@
     "serve": "vite preview",
     "test": "vitest run",
     "cf-typegen": "wrangler types --env-interface Env",
-    "deploy": "pnpm build && wrangler deploy --config wrangler.prod.jsonc"
+    "deploy": "pnpm build && node ../../node_modules/.pnpm/wrangler@4.75.0_@cloudflare+workers-types@4.20260120.0/node_modules/wrangler/bin/wrangler.js deploy --config wrangler.prod.jsonc"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -71,7 +71,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.21.1",
-    "@cloudflare/workers-types": "^4.20260405.1",
+    "@cloudflare/workers-types": "^4.20260120.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.9",
@@ -84,6 +84,6 @@
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4",
     "web-vitals": "^4.2.4",
-    "wrangler": "^4.80.0"
+    "wrangler": "^4.75.0"
   }
 }

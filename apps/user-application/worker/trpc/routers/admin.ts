@@ -7,6 +7,7 @@ import {
   createMemberProfile,
   setMemberActive,
   setMemberRole,
+  getMemberById,
   getMemberByNickname,
   getPendingMembers,
   approveMember,
@@ -105,20 +106,23 @@ export const adminRoutes = t.router({
       z.object({
         memberId: z.string(),
         sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        suitSize: suitSizeSchema,
         rawPoints: z.number().int().positive(),
         notes: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const multiplier = SUIT_MULTIPLIERS[input.suitSize];
+      const member = await getMemberById(input.memberId);
+      if (!member?.suitSize) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Uczestnik nie ma ustawionego rozmiaru kombinezonu." });
+      }
+      const multiplier = SUIT_MULTIPLIERS[member.suitSize];
       const correctedPoints = input.rawPoints * multiplier;
 
       await insertSession({
         id: genId(),
         memberId: input.memberId,
         sessionDate: input.sessionDate,
-        suitSize: input.suitSize,
+        suitSize: member.suitSize,
         rawPoints: input.rawPoints,
         correctedPoints,
         status: "approved",
@@ -126,7 +130,7 @@ export const adminRoutes = t.router({
         notes: input.notes ?? null,
       });
 
-      return { correctedPoints };
+      return { correctedPoints, suitSize: member.suitSize };
     }),
 
   deleteSession: trainerProcedure
