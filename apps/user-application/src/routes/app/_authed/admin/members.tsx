@@ -213,27 +213,31 @@ function MembersPage() {
                   )}
                 </TableCell>
                 <TableCell>
-                  <Select
-                    value={member.trainerId ?? "__none__"}
-                    onValueChange={(val) =>
-                      assignTrainer.mutate({
-                        userId: member.id,
-                        trainerId: val === "__none__" ? null : val,
-                      })
-                    }
-                  >
-                    <SelectTrigger className="h-7 w-36 text-xs">
-                      <SelectValue placeholder="Brak" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Brak</SelectItem>
-                      {(trainers ?? []).map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.nickname ?? t.name ?? t.id.slice(0, 8)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {member.role === "user" ? (
+                    <Select
+                      value={member.trainerId ?? "__none__"}
+                      onValueChange={(val) =>
+                        assignTrainer.mutate({
+                          userId: member.id,
+                          trainerId: val === "__none__" ? null : val,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="h-7 w-36 text-xs">
+                        <SelectValue placeholder="Brak" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Brak</SelectItem>
+                        {(trainers ?? []).map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.nickname ?? t.name ?? t.id.slice(0, 8)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Select

@@ -246,17 +246,15 @@ function MySessionsPage() {
         <LogSessionDialog suitSize={profile?.suitSize} />
       </div>
 
-      {!profile?.suitSize && (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 flex items-center justify-between gap-4">
-          <span>Ustaw rozmiar kombinezonu, aby móc dodawać sesje.</span>
-          <Link to="/app/settings">
-            <Button variant="outline" size="sm" className="gap-1 shrink-0 border-amber-500/50 text-amber-700 hover:bg-amber-500/10">
-              <Settings className="size-3" />
-              Ustawienia
-            </Button>
-          </Link>
-        </div>
-      )}
+      <div className={`rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 flex items-center justify-between gap-4 transition-opacity ${profile && !profile.suitSize ? "opacity-100" : "opacity-0 pointer-events-none select-none"}`}>
+        <span>Ustaw rozmiar kombinezonu, aby móc dodawać sesje.</span>
+        <Link to="/app/settings">
+          <Button variant="outline" size="sm" className="gap-1 shrink-0 border-amber-500/50 text-amber-700 hover:bg-amber-500/10">
+            <Settings className="size-3" />
+            Ustawienia
+          </Button>
+        </Link>
+      </div>
 
       {/* Filters */}
       <div className="flex items-center gap-2">

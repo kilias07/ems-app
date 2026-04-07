@@ -101,8 +101,10 @@ export function NavMain() {
                     <item.icon />
                     <span>{item.title}</span>
                   </SidebarMenuButton>
-                  {item.badge != null && item.badge > 0 && (
-                    <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
+                  {item.badge != null && (
+                    <SidebarMenuBadge className={item.badge === 0 ? "opacity-0" : ""}>
+                      {item.badge}
+                    </SidebarMenuBadge>
                   )}
                 </SidebarMenuItem>
               ))}
