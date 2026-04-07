@@ -15,6 +15,25 @@ import { siGoogle } from "simple-icons";
 import { useState } from "react";
 import { authClient } from "./client";
 
+const AUTH_ERRORS: Record<string, string> = {
+  "Invalid email or password": "Nieprawidłowy adres e-mail lub hasło.",
+  "Invalid credentials": "Nieprawidłowy adres e-mail lub hasło.",
+  "User not found": "Nie znaleziono użytkownika o podanym adresie e-mail.",
+  "User already exists": "Użytkownik o tym adresie e-mail już istnieje.",
+  "Email already exists": "Użytkownik o tym adresie e-mail już istnieje.",
+  "Password is too short": "Hasło jest zbyt krótkie.",
+  "Password too short": "Hasło jest zbyt krótkie.",
+  "Email is not verified": "Adres e-mail nie został zweryfikowany.",
+  "Too many requests": "Zbyt wiele prób logowania. Spróbuj ponownie za chwilę.",
+  "Something went wrong": "Wystąpił błąd. Spróbuj ponownie.",
+  "Internal server error": "Błąd serwera. Spróbuj ponownie.",
+};
+
+function translateAuthError(msg: string | undefined, fallback: string): string {
+  if (!msg) return fallback;
+  return AUTH_ERRORS[msg] ?? fallback;
+}
+
 interface LoginPopupProps {
   children: React.ReactNode;
 }
@@ -54,7 +73,7 @@ export function LoginPopup({ children }: LoginPopupProps) {
       callbackURL: "/app",
     });
     if (error) {
-      setSignInError(error.message ?? "Logowanie nieudane. Sprawdź swoje dane.");
+      setSignInError(translateAuthError(error.message, "Logowanie nieudane. Sprawdź swoje dane."));
     }
     setLoading(false);
   };
@@ -79,7 +98,7 @@ export function LoginPopup({ children }: LoginPopupProps) {
       password: regPassword,
     });
     if (error) {
-      setRegisterError(error.message ?? "Rejestracja nieudana. Spróbuj ponownie.");
+      setRegisterError(translateAuthError(error.message, "Rejestracja nieudana. Spróbuj ponownie."));
     } else {
       setRegistered(true);
     }

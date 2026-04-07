@@ -22,7 +22,7 @@ import { LogOut, User, Trash2, UserMinus } from "lucide-react";
 import { useState } from "react";
 import { authClient } from "./client";
 import { trpc } from "@/router";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 type UserProfilePopupProps = {
@@ -32,6 +32,7 @@ type UserProfilePopupProps = {
 
 function UserProfilePopup({ data, children }: UserProfilePopupProps) {
   const [loading, setLoading] = useState(false);
+  const { data: profile } = useQuery(trpc.profile.getMyProfile.queryOptions());
 
   const handleLogout = async () => {
     setLoading(true);
@@ -112,7 +113,7 @@ function UserProfilePopup({ data, children }: UserProfilePopupProps) {
             {loading ? "Wylogowywanie..." : "Wyloguj się"}
           </Button>
 
-          <AlertDialog>
+          {profile?.role !== "admin" && (<AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" className="w-full h-10 text-muted-foreground">
                 <UserMinus className="w-4 h-4 mr-2" />
@@ -136,9 +137,9 @@ function UserProfilePopup({ data, children }: UserProfilePopupProps) {
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
-          </AlertDialog>
+          </AlertDialog>)}
 
-          <AlertDialog>
+          {profile?.role !== "admin" && (<AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" className="w-full h-10 text-destructive hover:text-destructive hover:bg-destructive/10">
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -163,7 +164,7 @@ function UserProfilePopup({ data, children }: UserProfilePopupProps) {
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
-          </AlertDialog>
+          </AlertDialog>)}
         </div>
       </DialogContent>
     </Dialog>

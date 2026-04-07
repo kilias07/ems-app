@@ -3,7 +3,6 @@ import {
   IconTrophy,
   IconHistory,
   IconUsers,
-  IconFileImport,
   IconPlus,
   IconSettings,
   IconInbox,
@@ -59,13 +58,8 @@ export function NavMain() {
     { title: "Miejsca treningowe", to: "/app/admin/club-places", icon: IconMapPin, badge: null },
   ];
 
-  const adminItems = [
-    { title: "Import danych", to: "/app/admin/import", icon: IconFileImport, badge: null },
-  ];
-
   const isTrainerOrAdmin =
     profile?.role === "trainer" || profile?.role === "admin";
-  const isAdmin = profile?.role === "admin";
 
   return (
     <>
@@ -108,28 +102,6 @@ export function NavMain() {
                       {item.badge}
                     </SidebarMenuBadge>
                   )}
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      )}
-
-      {isAdmin && (
-        <SidebarGroup>
-          <SidebarGroupLabel>Admin</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {adminItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    onClick={() => nav({ to: item.to })}
-                    tooltip={item.title}
-                    isActive={isActive(item.to)}
-                  >
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
