@@ -5,6 +5,8 @@ import {
   updateNickname,
   getMemberByNickname,
   updateSuitSize,
+  deleteAccount,
+  setMemberActive,
 } from "@repo/data-ops/queries/members";
 import { getUserById } from "@repo/data-ops/queries/auth-user";
 import { sendEmail } from "@/worker/lib/email";
@@ -68,4 +70,14 @@ export const profileRoutes = t.router({
       await updateSuitSize(ctx.userInfo.userId, input.suitSize);
       return { success: true };
     }),
+
+  deleteMyAccount: t.procedure.mutation(async ({ ctx }) => {
+    await deleteAccount(ctx.userInfo.userId);
+    return { success: true };
+  }),
+
+  deactivateMyAccount: t.procedure.mutation(async ({ ctx }) => {
+    await setMemberActive(ctx.userInfo.userId, false);
+    return { success: true };
+  }),
 });
