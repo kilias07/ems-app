@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { trpc } from "@/router";
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +36,7 @@ export const Route = createFileRoute("/app/_authed/admin/log-session")({
 });
 
 function LogSessionPage() {
+  const queryClient = useQueryClient();
   const { data: members } = useSuspenseQuery(
     trpc.admin.listMembers.queryOptions(),
   );
@@ -69,6 +70,12 @@ function LogSessionPage() {
         setSessionDate(today);
         setRawPoints("");
         setNotes("");
+        queryClient.invalidateQueries({ queryKey: trpc.sessions.getMyStats.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.sessions.getWeeklyHistory.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.sessions.getMonthlyHistory.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.sessions.getDayOfWeekDistribution.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getLeaderboard.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getMyRanks.queryKey() });
       },
       onError: (err) => {
         toast.error(err.message);

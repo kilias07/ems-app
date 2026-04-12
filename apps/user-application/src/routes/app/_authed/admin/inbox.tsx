@@ -66,7 +66,16 @@ function InboxPage() {
 
   const approveSession = useMutation(
     trpc.admin.approveSession.mutationOptions({
-      onSuccess: () => { toast.success("Sesja zatwierdzona."); invalidateSessions(); },
+      onSuccess: () => {
+        toast.success("Sesja zatwierdzona.");
+        invalidateSessions();
+        queryClient.invalidateQueries({ queryKey: trpc.sessions.getMyStats.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.sessions.getWeeklyHistory.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.sessions.getMonthlyHistory.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.sessions.getDayOfWeekDistribution.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getLeaderboard.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getMyRanks.queryKey() });
+      },
       onError: (err) => toast.error(err.message),
     }),
   );

@@ -11,3 +11,6 @@ export const SUIT_MULTIPLIERS: Record<string, number> = {
 export type SuitSize = keyof typeof SUIT_MULTIPLIERS;
 
 export const SUIT_SIZES = Object.keys(SUIT_MULTIPLIERS) as SuitSize[];
+
+export const HOME_CLUB_ID = "home";
+export const HOME_CLUB_NAME = "Trening w domu";

@@ -11,11 +11,29 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  Bar,
+  BarChart,
+  XAxis,
+  YAxis,
+  Area,
+  AreaChart,
+  PolarAngleAxis,
+  PolarGrid,
+  Radar,
+  RadarChart,
+  CartesianGrid,
+} from "recharts";
+import {
   IconBolt,
   IconTrophy,
   IconCalendar,
   IconFlame,
-  IconChartBar,
   IconBuildingCommunity,
   IconMapPin,
   IconFlag,
@@ -31,6 +49,12 @@ export const Route = createFileRoute("/app/_authed/")({
         context.trpc.sessions.getWeeklyHistory.queryOptions(),
       ),
       context.queryClient.prefetchQuery(
+        context.trpc.sessions.getMonthlyHistory.queryOptions(),
+      ),
+      context.queryClient.prefetchQuery(
+        context.trpc.sessions.getDayOfWeekDistribution.queryOptions(),
+      ),
+      context.queryClient.prefetchQuery(
         context.trpc.leaderboard.getMyRanks.queryOptions({ period: "all" }),
       ),
       context.queryClient.prefetchQuery(
@@ -44,12 +68,58 @@ export const Route = createFileRoute("/app/_authed/")({
   component: DashboardPage,
 });
 
+const weeklyChartConfig = {
+  points: {
+    label: "Punkty",
+    color: "var(--chart-1)",
+  },
+} satisfies ChartConfig;
+
+const monthlyChartConfig = {
+  points: {
+    label: "Punkty",
+    color: "var(--chart-2)",
+  },
+  sessions: {
+    label: "Sesje",
+    color: "var(--chart-4)",
+  },
+} satisfies ChartConfig;
+
+const radarChartConfig = {
+  sessions: {
+    label: "Sesje",
+    color: "var(--chart-3)",
+  },
+} satisfies ChartConfig;
+
+const MONTH_NAMES: Record<string, string> = {
+  "01": "Sty",
+  "02": "Lut",
+  "03": "Mar",
+  "04": "Kwi",
+  "05": "Maj",
+  "06": "Cze",
+  "07": "Lip",
+  "08": "Sie",
+  "09": "Wrz",
+  "10": "Paź",
+  "11": "Lis",
+  "12": "Gru",
+};
+
 function DashboardPage() {
   const { data: stats } = useSuspenseQuery(
     trpc.sessions.getMyStats.queryOptions(),
   );
   const { data: weeklyHistory } = useSuspenseQuery(
     trpc.sessions.getWeeklyHistory.queryOptions(),
+  );
+  const { data: monthlyHistory } = useSuspenseQuery(
+    trpc.sessions.getMonthlyHistory.queryOptions(),
+  );
+  const { data: dowDistribution } = useSuspenseQuery(
+    trpc.sessions.getDayOfWeekDistribution.queryOptions(),
   );
   const { data: myRanks } = useSuspenseQuery(
     trpc.leaderboard.getMyRanks.queryOptions({ period: "all" }),
@@ -60,8 +130,6 @@ function DashboardPage() {
   const { data: clubInfo } = useSuspenseQuery(
     trpc.leaderboard.getMyClubInfo.queryOptions(),
   );
-
-  const maxPoints = Math.max(...weeklyHistory.map((w) => w.points), 1);
 
   const statCards = [
     {
@@ -74,7 +142,7 @@ function DashboardPage() {
     {
       title: "Łączne punkty",
       value: stats.totalPoints.toFixed(0),
-      description: "Punkty skorygowane",
+      description: "Łącznie",
       icon: IconBolt,
       iconClass: "text-primary",
       suffix: "pkt",
@@ -116,6 +184,17 @@ function DashboardPage() {
       icon: IconFlag,
     },
   ];
+
+  const weeklyData = weeklyHistory.map((w) => ({
+    week: w.weekStart.slice(5),
+    points: Math.round(w.points),
+  }));
+
+  const monthlyData = monthlyHistory.map((m) => ({
+    month: MONTH_NAMES[m.month.slice(5)] ?? m.month.slice(5),
+    points: Math.round(m.points),
+    sessions: m.sessions,
+  }));
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -178,47 +257,92 @@ function DashboardPage() {
         ))}
       </div>
 
-      {/* Weekly chart */}
+      {/* Weekly points bar chart */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <IconChartBar className="size-4 text-muted-foreground" />
-            <CardTitle className="text-base">Punkty tygodniowe</CardTitle>
-          </div>
-          <CardDescription>Twoje skorygowane punkty z ostatnich 8 tygodni</CardDescription>
+          <CardTitle className="text-base">Punkty tygodniowe</CardTitle>
+          <CardDescription>Skorygowane punkty z ostatnich 8 tygodni</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-end gap-2 h-40">
-            {weeklyHistory.map((week, i) => {
-              const pct = maxPoints > 0 ? (week.points / maxPoints) * 100 : 0;
-              const isCurrent = i === weeklyHistory.length - 1;
-              return (
-                <div
-                  key={week.weekStart}
-                  className="group flex flex-1 flex-col items-center gap-1"
-                >
-                  <span className="invisible text-xs text-muted-foreground group-hover:visible">
-                    {week.points > 0 ? week.points.toFixed(0) : "—"}
-                  </span>
-                  <div className="relative w-full flex items-end justify-center h-32">
-                    <div
-                      className={`w-full rounded-t transition-all ${
-                        isCurrent
-                          ? "bg-primary"
-                          : "bg-primary/30 hover:bg-primary/50"
-                      }`}
-                      style={{ height: `${Math.max(pct, 2)}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">
-                    {week.weekStart.slice(5)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+          <ChartContainer config={weeklyChartConfig} className="h-48 w-full">
+            <BarChart data={weeklyData} accessibilityLayer>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="week"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                fontSize={12}
+              />
+              <YAxis tickLine={false} axisLine={false} width={40} fontSize={12} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar
+                dataKey="points"
+                fill="var(--color-points)"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ChartContainer>
         </CardContent>
       </Card>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Monthly trend area chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Trend miesięczny</CardTitle>
+            <CardDescription>Punkty i sesje z ostatnich 6 miesięcy</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={monthlyChartConfig} className="h-48 w-full">
+              <AreaChart data={monthlyData} accessibilityLayer>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  fontSize={12}
+                />
+                <YAxis tickLine={false} axisLine={false} width={40} fontSize={12} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Area
+                  dataKey="points"
+                  type="monotone"
+                  fill="var(--color-points)"
+                  fillOpacity={0.2}
+                  stroke="var(--color-points)"
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        {/* Day of week radar chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Dni treningowe</CardTitle>
+            <CardDescription>W które dni najczęściej trenujesz</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={radarChartConfig} className="h-48 w-full">
+              <RadarChart data={dowDistribution}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="day" fontSize={12} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Radar
+                  dataKey="sessions"
+                  fill="var(--color-sessions)"
+                  fillOpacity={0.3}
+                  stroke="var(--color-sessions)"
+                  strokeWidth={2}
+                />
+              </RadarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -84,6 +84,12 @@ function LogSessionDialog({ suitSize }: { suitSize?: string | null }) {
         setRawPoints("");
         setNotes("");
         queryClient.invalidateQueries({ queryKey: trpc.sessions.getMySessions.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.sessions.getMyStats.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.sessions.getWeeklyHistory.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.sessions.getMonthlyHistory.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.sessions.getDayOfWeekDistribution.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getLeaderboard.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getMyRanks.queryKey() });
       },
       onError: (err) => toast.error(err.message),
     }),

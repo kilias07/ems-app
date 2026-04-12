@@ -129,9 +129,9 @@ function ImportPage() {
         toast.success(`Zaimportowano ${data.inserted} sesji`);
         setParsed(null);
         setCsvText("");
-        queryClient.invalidateQueries({
-          queryKey: trpc.admin.listMembers.queryKey(),
-        });
+        queryClient.invalidateQueries({ queryKey: trpc.admin.listMembers.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getLeaderboard.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getMyRanks.queryKey() });
       },
       onError: (err) => toast.error(err.message),
     }),

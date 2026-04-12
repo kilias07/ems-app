@@ -97,36 +97,111 @@ export async function getMemberStats(memberId: string) {
 
 export async function getWeeklyPointsHistory(memberId: string) {
   const db = getDb();
-  const weeks: { weekStart: string; weekEnd: string; points: number }[] = [];
   const today = new Date();
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
+  // Compute the 8 week ranges
+  const weekRanges: { weekStart: string; weekEnd: string }[] = [];
   for (let i = 7; i >= 0; i--) {
     const weekEnd = new Date(today);
     weekEnd.setDate(today.getDate() - today.getDay() + 1 - (i - 1) * 7);
     const weekStart = new Date(weekEnd);
     weekStart.setDate(weekEnd.getDate() - 6);
-
-    const fmt = (d: Date) => d.toISOString().slice(0, 10);
-    const result = await db
-      .select({ points: sql<number>`sum(${trainingSession.correctedPoints})` })
-      .from(trainingSession)
-      .where(
-        and(
-          eq(trainingSession.memberId, memberId),
-          eq(trainingSession.status, "approved"),
-          gte(trainingSession.sessionDate, fmt(weekStart)),
-          lte(trainingSession.sessionDate, fmt(weekEnd)),
-        ),
-      );
-
-    weeks.push({
-      weekStart: fmt(weekStart),
-      weekEnd: fmt(weekEnd),
-      points: result[0]?.points ?? 0,
-    });
+    weekRanges.push({ weekStart: fmt(weekStart), weekEnd: fmt(weekEnd) });
   }
 
-  return weeks;
+  const earliest = weekRanges[0].weekStart;
+  const latest = weekRanges[weekRanges.length - 1].weekEnd;
+
+  // Single query: group by week using strftime
+  const rows = await db
+    .select({
+      weekStart: sql<string>`date(${trainingSession.sessionDate}, 'weekday 1', '-7 days')`,
+      points: sql<number>`sum(${trainingSession.correctedPoints})`,
+    })
+    .from(trainingSession)
+    .where(
+      and(
+        eq(trainingSession.memberId, memberId),
+        eq(trainingSession.status, "approved"),
+        gte(trainingSession.sessionDate, earliest),
+        lte(trainingSession.sessionDate, latest),
+      ),
+    )
+    .groupBy(sql`date(${trainingSession.sessionDate}, 'weekday 1', '-7 days')`);
+
+  const pointsMap = new Map(rows.map((r) => [r.weekStart, r.points]));
+
+  return weekRanges.map((w) => ({
+    weekStart: w.weekStart,
+    weekEnd: w.weekEnd,
+    points: pointsMap.get(w.weekStart) ?? 0,
+  }));
+}
+
+export async function getMonthlyPointsHistory(memberId: string) {
+  const db = getDb();
+  const today = new Date();
+
+  // Compute 6 month keys
+  const monthKeys: string[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+
+  const earliest = monthKeys[0] + "-01";
+
+  // Single query: group by year-month
+  const rows = await db
+    .select({
+      month: sql<string>`substr(${trainingSession.sessionDate}, 1, 7)`,
+      points: sql<number>`coalesce(sum(${trainingSession.correctedPoints}), 0)`,
+      sessions: sql<number>`count(*)`,
+    })
+    .from(trainingSession)
+    .where(
+      and(
+        eq(trainingSession.memberId, memberId),
+        eq(trainingSession.status, "approved"),
+        gte(trainingSession.sessionDate, earliest),
+      ),
+    )
+    .groupBy(sql`substr(${trainingSession.sessionDate}, 1, 7)`);
+
+  const dataMap = new Map(rows.map((r) => [r.month, r]));
+
+  return monthKeys.map((key) => ({
+    month: key,
+    points: dataMap.get(key)?.points ?? 0,
+    sessions: dataMap.get(key)?.sessions ?? 0,
+  }));
+}
+
+export async function getDayOfWeekDistribution(memberId: string) {
+  const db = getDb();
+
+  const rows = await db
+    .select({
+      dow: sql<number>`cast(strftime('%w', ${trainingSession.sessionDate}) as integer)`,
+      sessions: sql<number>`count(*)`,
+    })
+    .from(trainingSession)
+    .where(
+      and(
+        eq(trainingSession.memberId, memberId),
+        eq(trainingSession.status, "approved"),
+      ),
+    )
+    .groupBy(sql`strftime('%w', ${trainingSession.sessionDate})`);
+
+  const dayNames = ["Nd", "Pn", "Wt", "Śr", "Cz", "Pt", "Sb"];
+  // Return all 7 days, Mon-Sun order
+  const reordered = [1, 2, 3, 4, 5, 6, 0];
+  return reordered.map((dow) => {
+    const row = rows.find((r) => r.dow === dow);
+    return { day: dayNames[dow], sessions: row?.sessions ?? 0 };
+  });
 }
 
 export async function insertSession(data: {

@@ -15,9 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { SUIT_MULTIPLIERS, SUIT_SIZES } from "@repo/data-ops/utils/suit-multipliers";
-const HOME_CLUB_ID = "home";
-const HOME_CLUB_NAME = "Trening w domu";
+import { SUIT_MULTIPLIERS, SUIT_SIZES, HOME_CLUB_ID, HOME_CLUB_NAME } from "@repo/data-ops/utils/suit-multipliers";
 
 export const Route = createFileRoute("/app/_authed/settings")({
   loader: async ({ context }) => {

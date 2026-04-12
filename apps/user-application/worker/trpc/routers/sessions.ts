@@ -5,6 +5,8 @@ import {
   getSessionsByMember,
   getMemberStats,
   getWeeklyPointsHistory,
+  getMonthlyPointsHistory,
+  getDayOfWeekDistribution,
   insertSession,
   resubmitSession,
 } from "@repo/data-ops/queries/sessions";
@@ -31,6 +33,14 @@ export const sessionsRoutes = t.router({
 
   getWeeklyHistory: t.procedure.query(async ({ ctx }) => {
     return getWeeklyPointsHistory(ctx.userInfo.userId);
+  }),
+
+  getMonthlyHistory: t.procedure.query(async ({ ctx }) => {
+    return getMonthlyPointsHistory(ctx.userInfo.userId);
+  }),
+
+  getDayOfWeekDistribution: t.procedure.query(async ({ ctx }) => {
+    return getDayOfWeekDistribution(ctx.userInfo.userId);
   }),
 
   logMySession: t.procedure

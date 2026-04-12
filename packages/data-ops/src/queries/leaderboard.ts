@@ -1,4 +1,4 @@
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { getDb } from "../db/database";
 import { clubPlace, memberProfile, trainingSession } from "../db/ems-schema";
 
@@ -41,47 +41,39 @@ export async function getLeaderboard(
   const filters = [approvedFilter, activeFilter];
   if (dateFilter) filters.push(dateFilter);
 
-  // Scope filtering
   if (scope === "club" && scopeKey) {
     filters.push(eq(memberProfile.clubPlaceId, scopeKey));
   } else if (scope === "city" && scopeKey) {
     filters.push(eq(clubPlace.city, scopeKey));
   }
-  // "country" = no scope filter (all active members)
 
   const needsClubJoin = scope === "city";
 
-  let query;
-  if (needsClubJoin) {
-    query = db
-      .select({
-        memberId: trainingSession.memberId,
-        totalScore: sql<number>`sum(${trainingSession.correctedPoints})`,
-        sessions: sql<number>`count(*)`,
-      })
-      .from(trainingSession)
-      .innerJoin(memberProfile, eq(trainingSession.memberId, memberProfile.id))
-      .innerJoin(clubPlace, eq(memberProfile.clubPlaceId, clubPlace.id))
-      .where(and(...filters))
-      .groupBy(trainingSession.memberId)
-      .orderBy(sql`sum(${trainingSession.correctedPoints}) DESC`);
-  } else {
-    query = db
-      .select({
-        memberId: trainingSession.memberId,
-        totalScore: sql<number>`sum(${trainingSession.correctedPoints})`,
-        sessions: sql<number>`count(*)`,
-      })
-      .from(trainingSession)
-      .innerJoin(memberProfile, eq(trainingSession.memberId, memberProfile.id))
-      .where(and(...filters))
-      .groupBy(trainingSession.memberId)
-      .orderBy(sql`sum(${trainingSession.correctedPoints}) DESC`);
-  }
+  const baseQuery = db
+    .select({
+      memberId: trainingSession.memberId,
+      totalScore: sql<number>`sum(${trainingSession.correctedPoints})`,
+      sessions: sql<number>`count(*)`,
+    })
+    .from(trainingSession)
+    .innerJoin(memberProfile, eq(trainingSession.memberId, memberProfile.id));
+
+  const query = needsClubJoin
+    ? baseQuery
+        .innerJoin(clubPlace, eq(memberProfile.clubPlaceId, clubPlace.id))
+        .where(and(...filters))
+        .groupBy(trainingSession.memberId)
+        .orderBy(sql`sum(${trainingSession.correctedPoints}) DESC`)
+    : baseQuery
+        .where(and(...filters))
+        .groupBy(trainingSession.memberId)
+        .orderBy(sql`sum(${trainingSession.correctedPoints}) DESC`);
 
   const rows = await query;
 
   if (rows.length === 0) return [];
+
+  const memberIds = rows.map((r) => r.memberId);
 
   const profiles = await db
     .select({
@@ -89,7 +81,8 @@ export async function getLeaderboard(
       nickname: memberProfile.nickname,
       avatarUrl: memberProfile.avatarUrl,
     })
-    .from(memberProfile);
+    .from(memberProfile)
+    .where(inArray(memberProfile.id, memberIds));
 
   const profileMap = new Map(profiles.map((p) => [p.id, p]));
 

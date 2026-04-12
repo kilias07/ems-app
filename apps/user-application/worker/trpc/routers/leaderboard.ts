@@ -5,8 +5,7 @@ import {
   getMemberRanks,
 } from "@repo/data-ops/queries/leaderboard";
 import { getClubPlaceById } from "@repo/data-ops/queries/club-places";
-const HOME_CLUB_ID = "home";
-const HOME_CLUB_NAME = "Trening w domu";
+import { HOME_CLUB_ID, HOME_CLUB_NAME } from "@repo/data-ops/utils/suit-multipliers";
 
 const periodSchema = z.enum(["all", "monthly", "weekly"]);
 const scopeSchema = z.enum(["club", "city", "country"]);
