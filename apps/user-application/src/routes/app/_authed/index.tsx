@@ -16,6 +16,9 @@ import {
   IconCalendar,
   IconFlame,
   IconChartBar,
+  IconBuildingCommunity,
+  IconMapPin,
+  IconFlag,
 } from "@tabler/icons-react";
 
 export const Route = createFileRoute("/app/_authed/")({
@@ -28,10 +31,13 @@ export const Route = createFileRoute("/app/_authed/")({
         context.trpc.sessions.getWeeklyHistory.queryOptions(),
       ),
       context.queryClient.prefetchQuery(
-        context.trpc.leaderboard.getMyRank.queryOptions({ period: "all" }),
+        context.trpc.leaderboard.getMyRanks.queryOptions({ period: "all" }),
       ),
       context.queryClient.prefetchQuery(
         context.trpc.profile.getMyProfile.queryOptions(),
+      ),
+      context.queryClient.prefetchQuery(
+        context.trpc.leaderboard.getMyClubInfo.queryOptions(),
       ),
     ]);
   },
@@ -45,11 +51,14 @@ function DashboardPage() {
   const { data: weeklyHistory } = useSuspenseQuery(
     trpc.sessions.getWeeklyHistory.queryOptions(),
   );
-  const { data: myRank } = useSuspenseQuery(
-    trpc.leaderboard.getMyRank.queryOptions({ period: "all" }),
+  const { data: myRanks } = useSuspenseQuery(
+    trpc.leaderboard.getMyRanks.queryOptions({ period: "all" }),
   );
   const { data: profile } = useSuspenseQuery(
     trpc.profile.getMyProfile.queryOptions(),
+  );
+  const { data: clubInfo } = useSuspenseQuery(
+    trpc.leaderboard.getMyClubInfo.queryOptions(),
   );
 
   const maxPoints = Math.max(...weeklyHistory.map((w) => w.points), 1);
@@ -73,25 +82,45 @@ function DashboardPage() {
     {
       title: "Ten tydzień",
       value: stats.weekSessions,
-      description: "Sesje w tym tygodniu",
+      description: `${stats.weekPoints.toFixed(0)} pkt`,
       icon: IconFlame,
       iconClass: "text-orange-500",
       suffix: "sesje",
     },
     {
       title: "Ten miesiąc",
-      value: stats.monthPoints.toFixed(0),
-      description: "Punkty skorygowane",
+      value: stats.monthSessions,
+      description: `${stats.monthPoints.toFixed(0)} pkt`,
       icon: IconTrophy,
       iconClass: "text-blue-500",
-      suffix: "pkt",
+      suffix: "sesje",
+    },
+  ];
+
+  const rankBadges = [
+    {
+      label: "Klub",
+      rank: myRanks.clubRank?.rank,
+      icon: IconBuildingCommunity,
+      detail: clubInfo?.name,
+    },
+    {
+      label: "Miasto",
+      rank: myRanks.cityRank?.rank,
+      icon: IconMapPin,
+      detail: clubInfo?.city,
+    },
+    {
+      label: "Kraj",
+      rank: myRanks.countryRank?.rank,
+      icon: IconFlag,
     },
   ];
 
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
             Witaj ponownie, {profile.nickname}
@@ -100,12 +129,26 @@ function DashboardPage() {
             Oto przegląd Twoich treningów EMS.
           </p>
         </div>
-        {myRank && (
-          <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-sm">
-            <IconTrophy className="size-4 text-primary" />
-            Ranking ogólny #{myRank.rank}
-          </Badge>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {rankBadges.map(
+            (badge) =>
+              badge.rank != null && (
+                <Badge
+                  key={badge.label}
+                  variant="outline"
+                  className="gap-1.5 px-3 py-1.5 text-sm"
+                >
+                  <badge.icon className="size-4 text-primary" />
+                  {badge.label} #{badge.rank}
+                  {badge.detail && (
+                    <span className="text-muted-foreground">
+                      ({badge.detail})
+                    </span>
+                  )}
+                </Badge>
+              ),
+          )}
+        </div>
       </div>
 
       <Separator />

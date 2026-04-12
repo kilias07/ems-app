@@ -7,7 +7,9 @@ import {
   updateSuitSize,
   deleteAccount,
   setMemberActive,
+  assignClubPlaceToUser,
 } from "@repo/data-ops/queries/members";
+import { getAllClubPlaces } from "@repo/data-ops/queries/club-places";
 import { getNotesForUser } from "@repo/data-ops/queries/notes";
 import { getUserById } from "@repo/data-ops/queries/auth-user";
 import { sendEmail } from "@/worker/lib/email";
@@ -23,6 +25,7 @@ export const profileRoutes = t.router({
       profileComplete: ctx.userInfo.profileComplete,
       avatarUrl: ctx.userInfo.avatarUrl,
       suitSize: ctx.userInfo.suitSize,
+      clubPlaceId: ctx.userInfo.clubPlaceId,
     };
   }),
 
@@ -69,6 +72,17 @@ export const profileRoutes = t.router({
     .input(z.object({ suitSize: z.enum(["R0", "R1", "RW2", "R2", "R3", "R4", "R5"]) }))
     .mutation(async ({ ctx, input }) => {
       await updateSuitSize(ctx.userInfo.userId, input.suitSize);
+      return { success: true };
+    }),
+
+  listClubPlaces: t.procedure.query(async () => {
+    return getAllClubPlaces();
+  }),
+
+  updateMyClubPlace: t.procedure
+    .input(z.object({ clubPlaceId: z.string().nullable() }))
+    .mutation(async ({ ctx, input }) => {
+      await assignClubPlaceToUser(ctx.userInfo.userId, input.clubPlaceId);
       return { success: true };
     }),
 

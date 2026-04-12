@@ -16,6 +16,7 @@ export async function getClubPlaceById(id: string) {
 export async function createClubPlace(data: {
   id: string;
   name: string;
+  city: string;
   address: string;
   openHours?: string | null;
   createdBy: string;
@@ -26,7 +27,7 @@ export async function createClubPlace(data: {
 
 export async function updateClubPlace(
   id: string,
-  data: { name?: string; address?: string; openHours?: string | null },
+  data: { name?: string; city?: string; address?: string; openHours?: string | null },
 ) {
   const db = getDb();
   await db.update(clubPlace).set(data).where(eq(clubPlace.id, id));

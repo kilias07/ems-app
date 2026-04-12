@@ -47,7 +47,7 @@ export async function getMemberStats(memberId: string) {
 
   const approvedOnly = eq(trainingSession.status, "approved");
 
-  const [totals, weekly, weeklyPoints, monthly] = await Promise.all([
+  const [totals, weekly, monthly] = await Promise.all([
     db
       .select({
         totalSessions: sql<number>`count(*)`,
@@ -57,7 +57,10 @@ export async function getMemberStats(memberId: string) {
       .where(and(eq(trainingSession.memberId, memberId), approvedOnly)),
 
     db
-      .select({ count: sql<number>`count(*)` })
+      .select({
+        count: sql<number>`count(*)`,
+        points: sql<number>`sum(${trainingSession.correctedPoints})`,
+      })
       .from(trainingSession)
       .where(
         and(
@@ -68,18 +71,10 @@ export async function getMemberStats(memberId: string) {
       ),
 
     db
-      .select({ points: sql<number>`sum(${trainingSession.correctedPoints})` })
-      .from(trainingSession)
-      .where(
-        and(
-          eq(trainingSession.memberId, memberId),
-          approvedOnly,
-          gte(trainingSession.sessionDate, fmt(weekStart)),
-        ),
-      ),
-
-    db
-      .select({ points: sql<number>`sum(${trainingSession.correctedPoints})` })
+      .select({
+        count: sql<number>`count(*)`,
+        points: sql<number>`sum(${trainingSession.correctedPoints})`,
+      })
       .from(trainingSession)
       .where(
         and(
@@ -94,7 +89,8 @@ export async function getMemberStats(memberId: string) {
     totalSessions: totals[0]?.totalSessions ?? 0,
     totalPoints: totals[0]?.totalPoints ?? 0,
     weekSessions: weekly[0]?.count ?? 0,
-    weekPoints: weeklyPoints[0]?.points ?? 0,
+    weekPoints: weekly[0]?.points ?? 0,
+    monthSessions: monthly[0]?.count ?? 0,
     monthPoints: monthly[0]?.points ?? 0,
   };
 }

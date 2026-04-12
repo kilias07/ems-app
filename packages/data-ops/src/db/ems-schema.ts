@@ -4,6 +4,7 @@ import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 export const clubPlace = sqliteTable("club_place", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  city: text("city").notNull().default(""),
   address: text("address").notNull(),
   openHours: text("open_hours"),
   createdBy: text("created_by").notNull(),

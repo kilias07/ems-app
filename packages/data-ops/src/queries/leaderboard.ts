@@ -1,19 +1,18 @@
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { getDb } from "../db/database";
-import { memberProfile, trainingSession } from "../db/ems-schema";
+import { clubPlace, memberProfile, trainingSession } from "../db/ems-schema";
 
 export type LeaderboardPeriod = "all" | "monthly" | "weekly";
+export type LeaderboardScope = "club" | "city" | "country";
 
 function buildDateFilter(period: LeaderboardPeriod, periodKey?: string) {
   if (period === "all") return undefined;
 
   if (period === "monthly" && periodKey) {
-    // periodKey = "2026-03"
     return sql`${trainingSession.sessionDate} LIKE ${periodKey + "%"}`;
   }
 
   if (period === "weekly" && periodKey) {
-    // periodKey = "2026-03-14" (Monday)
     const start = periodKey;
     const end = new Date(periodKey);
     end.setDate(end.getDate() + 6);
@@ -30,27 +29,59 @@ function buildDateFilter(period: LeaderboardPeriod, periodKey?: string) {
 export async function getLeaderboard(
   period: LeaderboardPeriod,
   periodKey?: string,
+  scope?: LeaderboardScope,
+  scopeKey?: string | null,
 ) {
   const db = getDb();
   const dateFilter = buildDateFilter(period, periodKey);
 
   const approvedFilter = eq(trainingSession.status, "approved");
-  const combinedFilter = dateFilter ? and(approvedFilter, dateFilter) : approvedFilter;
+  const activeFilter = eq(memberProfile.isActive, 1);
 
-  const rows = await db
-    .select({
-      memberId: trainingSession.memberId,
-      totalScore: sql<number>`sum(${trainingSession.correctedPoints})`,
-      sessions: sql<number>`count(*)`,
-    })
-    .from(trainingSession)
-    .where(combinedFilter)
-    .groupBy(trainingSession.memberId)
-    .orderBy(sql`sum(${trainingSession.correctedPoints}) DESC`);
+  const filters = [approvedFilter, activeFilter];
+  if (dateFilter) filters.push(dateFilter);
+
+  // Scope filtering
+  if (scope === "club" && scopeKey) {
+    filters.push(eq(memberProfile.clubPlaceId, scopeKey));
+  } else if (scope === "city" && scopeKey) {
+    filters.push(eq(clubPlace.city, scopeKey));
+  }
+  // "country" = no scope filter (all active members)
+
+  const needsClubJoin = scope === "city";
+
+  let query;
+  if (needsClubJoin) {
+    query = db
+      .select({
+        memberId: trainingSession.memberId,
+        totalScore: sql<number>`sum(${trainingSession.correctedPoints})`,
+        sessions: sql<number>`count(*)`,
+      })
+      .from(trainingSession)
+      .innerJoin(memberProfile, eq(trainingSession.memberId, memberProfile.id))
+      .innerJoin(clubPlace, eq(memberProfile.clubPlaceId, clubPlace.id))
+      .where(and(...filters))
+      .groupBy(trainingSession.memberId)
+      .orderBy(sql`sum(${trainingSession.correctedPoints}) DESC`);
+  } else {
+    query = db
+      .select({
+        memberId: trainingSession.memberId,
+        totalScore: sql<number>`sum(${trainingSession.correctedPoints})`,
+        sessions: sql<number>`count(*)`,
+      })
+      .from(trainingSession)
+      .innerJoin(memberProfile, eq(trainingSession.memberId, memberProfile.id))
+      .where(and(...filters))
+      .groupBy(trainingSession.memberId)
+      .orderBy(sql`sum(${trainingSession.correctedPoints}) DESC`);
+  }
+
+  const rows = await query;
 
   if (rows.length === 0) return [];
-
-  const memberIds = rows.map((r) => r.memberId);
 
   const profiles = await db
     .select({
@@ -79,8 +110,30 @@ export async function getMemberRank(
   memberId: string,
   period: LeaderboardPeriod,
   periodKey?: string,
+  scope?: LeaderboardScope,
+  scopeKey?: string | null,
 ) {
-  const board = await getLeaderboard(period, periodKey);
+  const board = await getLeaderboard(period, periodKey, scope, scopeKey);
   const entry = board.find((r) => r.memberId === memberId);
   return entry ?? null;
+}
+
+export async function getMemberRanks(
+  memberId: string,
+  period: LeaderboardPeriod,
+  periodKey?: string,
+  clubPlaceId?: string | null,
+  city?: string | null,
+) {
+  const [clubRank, cityRank, countryRank] = await Promise.all([
+    clubPlaceId
+      ? getMemberRank(memberId, period, periodKey, "club", clubPlaceId)
+      : null,
+    city
+      ? getMemberRank(memberId, period, periodKey, "city", city)
+      : null,
+    getMemberRank(memberId, period, periodKey, "country"),
+  ]);
+
+  return { clubRank, cityRank, countryRank };
 }

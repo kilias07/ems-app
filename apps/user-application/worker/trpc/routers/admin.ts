@@ -186,6 +186,7 @@ export const adminRoutes = t.router({
     .input(
       z.object({
         name: z.string().min(1).max(100),
+        city: z.string().min(1).max(100),
         address: z.string().min(1).max(200),
         openHours: z.string().optional(),
       }),
@@ -195,6 +196,7 @@ export const adminRoutes = t.router({
       await createClubPlace({
         id,
         name: input.name,
+        city: input.city,
         address: input.address,
         openHours: input.openHours ?? null,
         createdBy: ctx.userInfo.userId,
@@ -207,6 +209,7 @@ export const adminRoutes = t.router({
       z.object({
         id: z.string(),
         name: z.string().min(1).max(100).optional(),
+        city: z.string().min(1).max(100).optional(),
         address: z.string().min(1).max(200).optional(),
         openHours: z.string().nullable().optional(),
       }),

@@ -16,12 +16,19 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { SUIT_MULTIPLIERS, SUIT_SIZES } from "@repo/data-ops/utils/suit-multipliers";
+const HOME_CLUB_ID = "home";
+const HOME_CLUB_NAME = "Trening w domu";
 
 export const Route = createFileRoute("/app/_authed/settings")({
   loader: async ({ context }) => {
-    await context.queryClient.prefetchQuery(
-      context.trpc.profile.getMyProfile.queryOptions(),
-    );
+    await Promise.all([
+      context.queryClient.prefetchQuery(
+        context.trpc.profile.getMyProfile.queryOptions(),
+      ),
+      context.queryClient.prefetchQuery(
+        context.trpc.profile.listClubPlaces.queryOptions(),
+      ),
+    ]);
   },
   component: SettingsPage,
 });
@@ -44,6 +51,23 @@ function SettingsPage() {
   const [nicknameError, setNicknameError] = useState("");
   const nickname = slugify(rawNickname);
   const nicknameChanged = nickname.length >= 2 && nickname !== profile?.nickname;
+
+  // ── Club place ─────────────────────────────────────────────────────────────
+  const { data: clubPlaces } = useQuery(trpc.profile.listClubPlaces.queryOptions());
+  const [clubPlaceId, setClubPlaceId] = useState("");
+
+  const updateClub = useMutation(
+    trpc.profile.updateMyClubPlace.mutationOptions({
+      onSuccess: () => {
+        toast.success("Klub zaktualizowany.");
+        setClubPlaceId("");
+        queryClient.invalidateQueries({ queryKey: trpc.profile.getMyProfile.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getMyClubInfo.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getMyRanks.queryKey() });
+      },
+      onError: (err) => toast.error(err.message),
+    }),
+  );
 
   // ── Suit size ─────────────────────────────────────────────────────────────
   const [suitSize, setSuitSize] = useState("");
@@ -135,6 +159,48 @@ function SettingsPage() {
           onClick={() => updateNickname.mutate({ nickname })}
         >
           {updateNickname.isPending ? "Zapisywanie…" : "Zaktualizuj pseudonim"}
+        </Button>
+      </section>
+
+      <Separator />
+
+      {/* Club place */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-base font-semibold">Klub</h2>
+          <p className="text-sm text-muted-foreground">
+            Wybierz klub, do którego należysz. Wpływa na ranking klubowy i miejski.
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="club-place">Twój klub</Label>
+          <Select
+            value={clubPlaceId || profile?.clubPlaceId || ""}
+            onValueChange={setClubPlaceId}
+          >
+            <SelectTrigger id="club-place" className="w-72">
+              <SelectValue placeholder="Wybierz klub…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={HOME_CLUB_ID}>
+                {HOME_CLUB_NAME}
+              </SelectItem>
+              {clubPlaces?.map((cp) => (
+                <SelectItem key={cp.id} value={cp.id}>
+                  {cp.name}
+                  <span className="ml-2 text-muted-foreground text-xs">
+                    {cp.city}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button
+          disabled={!clubPlaceId || clubPlaceId === profile?.clubPlaceId || updateClub.isPending}
+          onClick={() => updateClub.mutate({ clubPlaceId })}
+        >
+          {updateClub.isPending ? "Zapisywanie…" : "Zaktualizuj klub"}
         </Button>
       </section>
 

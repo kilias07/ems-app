@@ -50,6 +50,7 @@ export const sessionsRoutes = t.router({
         });
       }
       const correctedPoints = input.rawPoints * SUIT_MULTIPLIERS[suitSize];
+      const isTrainerOrAdmin = ctx.userInfo.role === "trainer" || ctx.userInfo.role === "admin";
       await insertSession({
         id: genId(),
         memberId: ctx.userInfo.userId,
@@ -57,7 +58,7 @@ export const sessionsRoutes = t.router({
         suitSize,
         rawPoints: input.rawPoints,
         correctedPoints,
-        status: "pending",
+        status: isTrainerOrAdmin ? "approved" : "pending",
         createdBy: ctx.userInfo.userId,
         notes: input.notes ?? null,
       });

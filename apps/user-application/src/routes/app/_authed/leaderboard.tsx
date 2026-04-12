@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { trpc } from "@/router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -22,17 +22,33 @@ function getCurrentMonthKey() {
 function getCurrentWeekKey() {
   const d = new Date();
   const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(d);
   monday.setDate(diff);
   return monday.toISOString().slice(0, 10);
 }
 
 type Period = "all" | "monthly" | "weekly";
+type Scope = "club" | "city" | "country";
 
-function LeaderboardTable({ period, periodKey }: { period: Period; periodKey?: string }) {
+function LeaderboardTable({
+  period,
+  periodKey,
+  scope,
+  scopeKey,
+}: {
+  period: Period;
+  periodKey?: string;
+  scope: Scope;
+  scopeKey?: string | null;
+}) {
   const { data: board } = useSuspenseQuery({
-    ...trpc.leaderboard.getLeaderboard.queryOptions({ period, periodKey }),
+    ...trpc.leaderboard.getLeaderboard.queryOptions({
+      period,
+      periodKey,
+      scope,
+      scopeKey,
+    }),
     staleTime: 5 * 60 * 1000,
   });
   const { data: myProfile } = useSuspenseQuery({
@@ -109,13 +125,24 @@ export const Route = createFileRoute("/app/_authed/leaderboard")({
     const weekKey = getCurrentWeekKey();
     await Promise.all([
       context.queryClient.prefetchQuery(
-        context.trpc.leaderboard.getLeaderboard.queryOptions({ period: "all" }),
+        context.trpc.leaderboard.getLeaderboard.queryOptions({
+          period: "all",
+          scope: "country",
+        }),
       ),
       context.queryClient.prefetchQuery(
-        context.trpc.leaderboard.getLeaderboard.queryOptions({ period: "monthly", periodKey: monthKey }),
+        context.trpc.leaderboard.getLeaderboard.queryOptions({
+          period: "monthly",
+          periodKey: monthKey,
+          scope: "country",
+        }),
       ),
       context.queryClient.prefetchQuery(
-        context.trpc.leaderboard.getLeaderboard.queryOptions({ period: "weekly", periodKey: weekKey }),
+        context.trpc.leaderboard.getLeaderboard.queryOptions({
+          period: "weekly",
+          periodKey: weekKey,
+          scope: "country",
+        }),
       ),
       context.queryClient.prefetchQuery(
         context.trpc.profile.getMyProfile.queryOptions(),
@@ -126,29 +153,73 @@ export const Route = createFileRoute("/app/_authed/leaderboard")({
 });
 
 function LeaderboardPage() {
-  const [tab, setTab] = useState<Period>("all");
+  const [period, setPeriod] = useState<Period>("all");
+  const [scope, setScope] = useState<Scope>("club");
+
+  const { data: profile } = useSuspenseQuery({
+    ...trpc.profile.getMyProfile.queryOptions(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: clubPlaces } = useSuspenseQuery({
+    ...trpc.leaderboard.getMyClubInfo.queryOptions(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const periodKey =
+    period === "monthly"
+      ? getCurrentMonthKey()
+      : period === "weekly"
+        ? getCurrentWeekKey()
+        : undefined;
+
+  const scopeKey =
+    scope === "club"
+      ? profile.clubPlaceId
+      : scope === "city"
+        ? clubPlaces?.city
+        : undefined;
+
+  const noClub = !profile.clubPlaceId;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Ranking</h1>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as Period)}>
-        <TabsList>
-          <TabsTrigger value="all">Wszystkie czasy</TabsTrigger>
-          <TabsTrigger value="monthly">Ten miesiąc</TabsTrigger>
-          <TabsTrigger value="weekly">Ten tydzień</TabsTrigger>
-        </TabsList>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Tabs value={scope} onValueChange={(v) => setScope(v as Scope)}>
+          <TabsList>
+            <TabsTrigger value="club" disabled={noClub}>
+              Klub
+            </TabsTrigger>
+            <TabsTrigger value="city" disabled={noClub}>
+              Miasto
+            </TabsTrigger>
+            <TabsTrigger value="country">Kraj</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        <TabsContent value="all" className="mt-4">
-          <LeaderboardTable period="all" />
-        </TabsContent>
-        <TabsContent value="monthly" className="mt-4">
-          <LeaderboardTable period="monthly" periodKey={getCurrentMonthKey()} />
-        </TabsContent>
-        <TabsContent value="weekly" className="mt-4">
-          <LeaderboardTable period="weekly" periodKey={getCurrentWeekKey()} />
-        </TabsContent>
-      </Tabs>
+        <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+          <TabsList>
+            <TabsTrigger value="all">Wszystkie czasy</TabsTrigger>
+            <TabsTrigger value="monthly">Ten miesiąc</TabsTrigger>
+            <TabsTrigger value="weekly">Ten tydzień</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {noClub && scope !== "country" ? (
+        <div className="rounded-md border p-8 text-center text-muted-foreground">
+          Nie jesteś przypisany do żadnego klubu. Skontaktuj się z trenerem.
+        </div>
+      ) : (
+        <LeaderboardTable
+          period={period}
+          periodKey={periodKey}
+          scope={scope}
+          scopeKey={scopeKey}
+        />
+      )}
     </div>
   );
 }

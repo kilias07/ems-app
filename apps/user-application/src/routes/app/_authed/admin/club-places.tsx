@@ -32,9 +32,9 @@ export const Route = createFileRoute("/app/_authed/admin/club-places")({
   component: ClubPlacesPage,
 });
 
-type ClubPlaceForm = { name: string; address: string; openHours: string };
+type ClubPlaceForm = { name: string; city: string; address: string; openHours: string };
 
-const emptyForm = (): ClubPlaceForm => ({ name: "", address: "", openHours: "" });
+const emptyForm = (): ClubPlaceForm => ({ name: "", city: "", address: "", openHours: "" });
 
 function ClubPlacesPage() {
   const queryClient = useQueryClient();
@@ -82,9 +82,9 @@ function ClubPlacesPage() {
     }),
   );
 
-  const openEdit = (place: { id: string; name: string; address: string; openHours?: string | null }) => {
+  const openEdit = (place: { id: string; name: string; city: string; address: string; openHours?: string | null }) => {
     setEditId(place.id);
-    setEditForm({ name: place.name, address: place.address, openHours: place.openHours ?? "" });
+    setEditForm({ name: place.name, city: place.city, address: place.address, openHours: place.openHours ?? "" });
     setEditOpen(true);
   };
 
@@ -109,6 +109,7 @@ function ClubPlacesPage() {
               onSubmit={() =>
                 createPlace.mutate({
                   name: createForm.name,
+                  city: createForm.city,
                   address: createForm.address,
                   openHours: createForm.openHours || undefined,
                 })
@@ -125,6 +126,7 @@ function ClubPlacesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Nazwa</TableHead>
+              <TableHead>Miasto</TableHead>
               <TableHead>Adres</TableHead>
               <TableHead>Godziny otwarcia</TableHead>
               <TableHead className="text-right">Akcje</TableHead>
@@ -133,7 +135,7 @@ function ClubPlacesPage() {
           <TableBody>
             {!places || places.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center h-20 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center h-20 text-muted-foreground">
                   Brak miejsc treningowych.
                 </TableCell>
               </TableRow>
@@ -141,6 +143,7 @@ function ClubPlacesPage() {
               places.map((place) => (
                 <TableRow key={place.id}>
                   <TableCell className="font-medium">{place.name}</TableCell>
+                  <TableCell className="text-muted-foreground">{place.city}</TableCell>
                   <TableCell className="text-muted-foreground">{place.address}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {place.openHours ?? "—"}
@@ -182,6 +185,7 @@ function ClubPlacesPage() {
                 updatePlace.mutate({
                   id: editId,
                   name: editForm.name,
+                  city: editForm.city,
                   address: editForm.address,
                   openHours: editForm.openHours || null,
                 });
@@ -221,9 +225,18 @@ function PlaceForm({
         />
       </div>
       <div className="space-y-1">
+        <Label>Miasto</Label>
+        <Input
+          placeholder="np. Warszawa"
+          value={form.city}
+          onChange={(e) => onChange({ ...form, city: e.target.value })}
+          maxLength={100}
+        />
+      </div>
+      <div className="space-y-1">
         <Label>Adres</Label>
         <Input
-          placeholder="np. ul. Marszałkowska 1, Warszawa"
+          placeholder="np. ul. Marszałkowska 1"
           value={form.address}
           onChange={(e) => onChange({ ...form, address: e.target.value })}
           maxLength={200}
@@ -243,7 +256,7 @@ function PlaceForm({
       </div>
       <Button
         className="w-full"
-        disabled={!form.name.trim() || !form.address.trim() || isPending}
+        disabled={!form.name.trim() || !form.city.trim() || !form.address.trim() || isPending}
         onClick={onSubmit}
       >
         {isPending ? "Zapisywanie…" : submitLabel}
