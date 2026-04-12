@@ -7,7 +7,7 @@ import { createMemberProfile } from "./queries/members";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let auth: any;
 
-const ADMIN_EMAILS = ["arekjuve@googlemail.com", "kamilkiliasinski@gmail.com"];
+const ADMIN_EMAILS = ["arekjuve@googlemail.com", "arekjuve@gmail.com", "kamilkiliasinski@gmail.com"];
 
 export function createBetterAuth(
   database: NonNullable<Parameters<typeof betterAuth>[0]>["database"],
