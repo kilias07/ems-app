@@ -39,6 +39,26 @@ export function welcomeEmailHtml(nickname: string): string {
 </html>`;
 }
 
+export function accountApprovedEmailHtml(nickname: string | null): string {
+  const greeting = nickname ? `Cześć ${nickname}!` : "Cześć!";
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:sans-serif;background:#f9fafb;margin:0;padding:40px 20px">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
+    <h1 style="margin:0 0 8px;font-size:24px;color:#111">${greeting}</h1>
+    <p style="color:#555;margin:0 0 24px;font-size:15px;line-height:1.5">
+      Twoje konto w EMS Studio zostało zatwierdzone. Możesz teraz korzystać z aplikacji — śledzić swoje treningi, punkty i pozycję w rankingu.
+    </p>
+    <a href="/app"
+       style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600">
+      Przejdź do aplikacji
+    </a>
+  </div>
+</body>
+</html>`;
+}
+
 export function weeklySummaryEmailHtml(
   nickname: string,
   stats: {

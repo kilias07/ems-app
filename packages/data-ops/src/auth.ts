@@ -25,7 +25,8 @@ export function createBetterAuth(
       autoSignInAfterVerification: true,
       sendVerificationEmail: email
         ? async ({ user, url }: { user: { email: string }; url: string }) => {
-            await fetch("https://api.resend.com/emails", {
+            console.log(`[auth] Sending verification email to ${user.email}`);
+            const res = await fetch("https://api.resend.com/emails", {
               method: "POST",
               headers: {
                 Authorization: `Bearer ${email.apiKey}`,
@@ -56,6 +57,12 @@ export function createBetterAuth(
 </html>`,
               }),
             });
+            if (!res.ok) {
+              const text = await res.text();
+              console.error(`[auth] Resend error ${res.status}: ${text}`);
+            } else {
+              console.log(`[auth] Verification email sent to ${user.email}`);
+            }
           }
         : undefined,
     },

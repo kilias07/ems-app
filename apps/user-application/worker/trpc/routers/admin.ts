@@ -1,6 +1,9 @@
 import { adminProcedure, trainerProcedure, t } from "@/worker/trpc/trpc-instance";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { sendEmail } from "@/worker/lib/email";
+import { accountApprovedEmailHtml } from "@/worker/lib/email-templates";
+import { getUserById } from "@repo/data-ops/queries/auth-user";
 const genId = () => crypto.randomUUID();
 import {
   getAllMembers,
@@ -55,8 +58,26 @@ export const adminRoutes = t.router({
 
   approveMember: trainerProcedure
     .input(z.object({ memberId: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       await approveMember(input.memberId);
+
+      ctx.workerCtx.waitUntil(
+        (async () => {
+          const [member, authUser] = await Promise.all([
+            getMemberById(input.memberId),
+            getUserById(input.memberId),
+          ]);
+          if (!authUser?.email) return;
+          await sendEmail({
+            apiKey: ctx.env.RESEND_API_KEY,
+            from: ctx.env.RESEND_FROM_EMAIL,
+            to: authUser.email,
+            subject: "Twoje konto zostało zatwierdzone — EMS Studio",
+            html: accountApprovedEmailHtml(member?.nickname ?? null),
+          });
+        })(),
+      );
+
       return { success: true };
     }),
 
