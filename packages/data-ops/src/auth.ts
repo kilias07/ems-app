@@ -24,7 +24,7 @@ export function createBetterAuth(
         ? async ({ user, url }: { user: { email: string }; url: string }) => {
             // Replace default callbackURL with /app/pending?verified=1
             const verifyUrl = new URL(url);
-            verifyUrl.searchParams.set("callbackURL", "/app/pending?verified=1");
+            verifyUrl.searchParams.set("callbackURL", "/app/setup-profile?verified=1");
             const finalUrl = verifyUrl.toString();
             console.log(`[auth] Sending verification email to ${user.email}`);
             const res = await fetch("https://api.resend.com/emails", {

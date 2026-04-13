@@ -1,7 +1,7 @@
-import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
+import { createFileRoute, redirect, useRouter, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { trpc } from "@/router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,11 +12,27 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Toaster } from "@/components/ui/sonner";
-import { IconBolt } from "@tabler/icons-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { IconBolt, IconCircleCheck } from "@tabler/icons-react";
 import { isRedirect } from "@tanstack/react-router";
+import { SUIT_MULTIPLIERS, SUIT_SIZES } from "@repo/data-ops/utils/suit-multipliers";
+import { z } from "zod";
+
+const HOME_CLUB_ID = "home";
+const HOME_CLUB_NAME = "Trening w domu";
+
+const searchSchema = z.object({
+  verified: z.coerce.number().optional(),
+});
 
 export const Route = createFileRoute("/app/setup-profile")({
+  validateSearch: searchSchema,
   loader: async ({ context }) => {
     try {
       const profile = await context.queryClient.fetchQuery(
@@ -45,57 +61,90 @@ function slugify(value: string): string {
 function SetupProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { verified } = useSearch({ from: "/app/setup-profile" });
+
   const [raw, setRaw] = useState("");
+  const [suitSize, setSuitSize] = useState("");
+  const [clubPlaceId, setClubPlaceId] = useState("");
   const [error, setError] = useState("");
 
   const nickname = slugify(raw);
 
+  const { data: clubPlaces } = useQuery(trpc.profile.listClubPlaces.queryOptions());
+
   const updateNickname = useMutation(
-    trpc.profile.updateNickname.mutationOptions({
-      onSuccess: async () => {
-        const profile = await queryClient.fetchQuery({
-          ...trpc.profile.getMyProfile.queryOptions(),
-          staleTime: 0,
-        });
-        if (profile.status === "pending") {
-          router.navigate({ to: "/app/pending" });
-        } else {
-          router.navigate({ to: "/app" });
-        }
-      },
-      onError: (err) => {
-        setError(err.message);
-      },
-    }),
+    trpc.profile.updateNickname.mutationOptions(),
+  );
+  const updateSuit = useMutation(
+    trpc.profile.updateSuitSize.mutationOptions(),
+  );
+  const updateClub = useMutation(
+    trpc.profile.updateMyClubPlace.mutationOptions(),
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const isPending = updateNickname.isPending || updateSuit.isPending || updateClub.isPending;
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    updateNickname.mutate({ nickname });
+
+    try {
+      await updateNickname.mutateAsync({ nickname });
+
+      const promises = [];
+      if (suitSize) {
+        promises.push(updateSuit.mutateAsync({ suitSize: suitSize as any }));
+      }
+      if (clubPlaceId) {
+        promises.push(updateClub.mutateAsync({ clubPlaceId }));
+      }
+      if (promises.length > 0) {
+        await Promise.all(promises);
+      }
+
+      const profile = await queryClient.fetchQuery({
+        ...trpc.profile.getMyProfile.queryOptions(),
+        staleTime: 0,
+      });
+
+      if (profile.status === "pending") {
+        router.navigate({ to: "/app/pending" });
+      } else {
+        router.navigate({ to: "/app" });
+      }
+    } catch (err: any) {
+      setError(err?.message ?? "Wystąpił błąd. Spróbuj ponownie.");
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Toaster />
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
+          {verified === 1 && (
+            <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 px-4 py-3 flex items-center gap-3 text-sm text-green-800 dark:text-green-300 text-left mb-2">
+              <IconCircleCheck className="size-5 shrink-0" />
+              <span>E-mail zweryfikowany pomyślnie! Twoje konto zostało utworzone.</span>
+            </div>
+          )}
           <div className="flex justify-center">
             <IconBolt className="size-10 text-primary" />
           </div>
           <CardTitle className="text-2xl">Uzupełnij profil</CardTitle>
           <CardDescription>
-            Ustaw swój pseudonim — będzie widoczny w rankingu. Po zapisaniu Twoje konto zostanie przesłane do akceptacji przez trenera.
+            Ustaw swoje dane, aby dokończyć rejestrację. Po zapisaniu Twoje konto zostanie przesłane do akceptacji przez trenera.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Nickname */}
             <div className="space-y-2">
-              <Label htmlFor="nickname">Pseudonim</Label>
+              <Label htmlFor="nickname">
+                Pseudonim <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="nickname"
-                placeholder="np. Żelazny Marek, Flash Kamil"
+                placeholder="np. zelazny-marek"
                 value={raw}
                 onChange={(e) => {
                   setRaw(e.target.value);
@@ -112,7 +161,54 @@ function SetupProfilePage() {
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
-                Tylko litery, cyfry i myślniki. Spacje zamieniają się w myślniki.
+                Twoja publiczna nazwa w rankingu. Tylko litery, cyfry i myślniki.
+              </p>
+            </div>
+
+            {/* Suit size */}
+            <div className="space-y-2">
+              <Label htmlFor="suit-size">Rozmiar kombinezonu</Label>
+              <Select value={suitSize} onValueChange={setSuitSize}>
+                <SelectTrigger id="suit-size">
+                  <SelectValue placeholder="Wybierz rozmiar…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUIT_SIZES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                      <span className="ml-2 text-muted-foreground text-xs">
+                        &times;{SUIT_MULTIPLIERS[s]} mnożnik
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Wpływa na mnożnik punktów. Możesz zmienić później w ustawieniach.
+              </p>
+            </div>
+
+            {/* Club */}
+            <div className="space-y-2">
+              <Label htmlFor="club-place">Klub</Label>
+              <Select value={clubPlaceId} onValueChange={setClubPlaceId}>
+                <SelectTrigger id="club-place">
+                  <SelectValue placeholder="Wybierz klub…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={HOME_CLUB_ID}>{HOME_CLUB_NAME}</SelectItem>
+                  {clubPlaces?.map((cp) => (
+                    <SelectItem key={cp.id} value={cp.id}>
+                      {cp.name}
+                      <span className="ml-2 text-muted-foreground text-xs">
+                        {cp.city}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Wpływa na ranking klubowy i miejski. Możesz zmienić później.
               </p>
             </div>
 
@@ -121,9 +217,9 @@ function SetupProfilePage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={updateNickname.isPending || nickname.length < 2 || nickname.length > 30}
+              disabled={isPending || nickname.length < 2 || nickname.length > 30}
             >
-              {updateNickname.isPending ? "Zapisywanie…" : "Przejdź do panelu"}
+              {isPending ? "Zapisywanie…" : "Zapisz i kontynuuj"}
             </Button>
           </form>
         </CardContent>
