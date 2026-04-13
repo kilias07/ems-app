@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "user-application-preview",
+  "name": "ems-app-preview",
   "main": "worker/index.ts",
   "compatibility_date": "2025-07-11",
   "compatibility_flags": ["nodejs_compat"],
