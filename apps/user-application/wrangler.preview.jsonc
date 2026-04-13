@@ -16,7 +16,7 @@
   },
 
   "vars": {
-    "RESEND_FROM_EMAIL": "onboarding@resend.dev"
+    "RESEND_FROM_EMAIL": "noreply@ems360.pl"
   },
 
   "d1_databases": [
