@@ -12,7 +12,6 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { IconBolt } from "@tabler/icons-react";
 import { isRedirect } from "@tanstack/react-router";
@@ -54,11 +53,15 @@ function SetupProfilePage() {
   const updateNickname = useMutation(
     trpc.profile.updateNickname.mutationOptions({
       onSuccess: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: trpc.profile.getMyProfile.queryKey(),
+        const profile = await queryClient.fetchQuery({
+          ...trpc.profile.getMyProfile.queryOptions(),
+          staleTime: 0,
         });
-        toast.success("Profil ustawiony! Witaj w EMS Studio.");
-        router.navigate({ to: "/app" });
+        if (profile.status === "pending") {
+          router.navigate({ to: "/app/pending" });
+        } else {
+          router.navigate({ to: "/app" });
+        }
       },
       onError: (err) => {
         setError(err.message);
@@ -82,7 +85,7 @@ function SetupProfilePage() {
           </div>
           <CardTitle className="text-2xl">Uzupełnij profil</CardTitle>
           <CardDescription>
-            Ustaw pseudonim, aby ukończyć rejestrację. Po akceptacji przez trenera uzyskasz pełny dostęp.
+            Ustaw swój pseudonim — będzie widoczny w rankingu. Po zapisaniu Twoje konto zostanie przesłane do akceptacji przez trenera.
           </CardDescription>
         </CardHeader>
         <CardContent>
