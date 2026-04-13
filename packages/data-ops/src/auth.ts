@@ -4,9 +4,6 @@ import { getDb } from "./db/database";
 import { account, session, user, verification } from "./drizzle-out/auth-schema";
 import { createMemberProfile } from "./queries/members";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let auth: any;
-
 const ADMIN_EMAILS = ["arekjuve@googlemail.com", "arekjuve@gmail.com", "kamilkiliasinski@gmail.com"];
 
 export function createBetterAuth(
@@ -100,9 +97,7 @@ export function getAuth(
   google: { clientId: string; clientSecret: string },
   email?: { apiKey: string; from: string },
 ) {
-  if (auth) return auth;
-
-  auth = createBetterAuth(
+  return createBetterAuth(
     drizzleAdapter(getDb(), {
       provider: "sqlite",
       schema: {
@@ -115,5 +110,4 @@ export function getAuth(
     google,
     email,
   );
-  return auth;
 }
