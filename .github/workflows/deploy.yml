@@ -2,7 +2,7 @@ name: Deploy to Cloudflare Workers
 
 on:
   push:
-    branches: [main]
+    branches: [main, development]
 
 jobs:
   deploy:
@@ -27,10 +27,20 @@ jobs:
         run: pnpm build
         working-directory: apps/user-application
 
-      # D1 migrations are applied manually: wrangler d1 migrations apply DB --remote --config apps/user-application/wrangler.jsonc
+      # D1 migrations are applied manually:
+      # Production: wrangler d1 migrations apply DB --remote --config apps/user-application/wrangler.jsonc
+      # Preview:    wrangler d1 migrations apply DB --remote --config apps/user-application/wrangler.preview.jsonc
 
-      - name: Deploy
+      - name: Deploy Production
+        if: github.ref == 'refs/heads/main'
         run: npx wrangler deploy
+        working-directory: apps/user-application
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Deploy Preview
+        if: github.ref == 'refs/heads/development'
+        run: npx wrangler deploy --config wrangler.preview.jsonc
         working-directory: apps/user-application
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
