@@ -36,7 +36,7 @@ export async function runWeeklySummary(env: Env): Promise<void> {
         apiKey: env.RESEND_API_KEY,
         from: env.RESEND_FROM_EMAIL,
         to: email,
-        subject: "Your EMS Studio weekly summary",
+        subject: "Twoje podsumowanie tygodnia — EMS Studio",
         html,
       });
     }),
