@@ -1,8 +1,14 @@
-import { createFileRoute, redirect, isRedirect } from "@tanstack/react-router";
-import { IconBolt } from "@tabler/icons-react";
+import { createFileRoute, redirect, isRedirect, useSearch } from "@tanstack/react-router";
+import { IconBolt, IconCircleCheck } from "@tabler/icons-react";
 import { authClient } from "@/components/auth/client";
+import { z } from "zod";
+
+const pendingSearchSchema = z.object({
+  verified: z.coerce.number().optional(),
+});
 
 export const Route = createFileRoute("/app/pending")({
+  validateSearch: pendingSearchSchema,
   loader: async ({ context }) => {
     try {
       const profile = await context.queryClient.fetchQuery(
@@ -20,9 +26,17 @@ export const Route = createFileRoute("/app/pending")({
 });
 
 function PendingPage() {
+  const { verified } = useSearch({ from: "/app/pending" });
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="max-w-md w-full text-center space-y-6">
+        {verified === 1 && (
+          <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 px-4 py-3 flex items-center gap-3 text-sm text-green-800 dark:text-green-300">
+            <IconCircleCheck className="size-5 shrink-0" />
+            <span>E-mail zweryfikowany pomyślnie! Twoje konto zostało utworzone.</span>
+          </div>
+        )}
         <div className="flex justify-center">
           <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center">
             <IconBolt className="size-8 text-primary" />

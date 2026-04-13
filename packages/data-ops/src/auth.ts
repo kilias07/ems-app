@@ -22,6 +22,10 @@ export function createBetterAuth(
       autoSignInAfterVerification: true,
       sendVerificationEmail: email
         ? async ({ user, url }: { user: { email: string }; url: string }) => {
+            // Replace default callbackURL with /app/pending?verified=1
+            const verifyUrl = new URL(url);
+            verifyUrl.searchParams.set("callbackURL", "/app/pending?verified=1");
+            const finalUrl = verifyUrl.toString();
             console.log(`[auth] Sending verification email to ${user.email}`);
             const res = await fetch("https://api.resend.com/emails", {
               method: "POST",
@@ -42,7 +46,7 @@ export function createBetterAuth(
     <p style="color:#555;margin:0 0 32px;font-size:15px;line-height:1.5">
       Kliknij poniższy przycisk, aby zweryfikować swój adres e-mail i aktywować konto w EMS Studio.
     </p>
-    <a href="${url}"
+    <a href="${finalUrl}"
        style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600">
       Zweryfikuj e-mail
     </a>
