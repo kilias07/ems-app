@@ -185,10 +185,13 @@ function DashboardPage() {
     },
   ];
 
-  const weeklyData = weeklyHistory.map((w) => ({
-    week: w.weekStart.slice(5),
-    points: Math.round(w.points),
-  }));
+  const weeklyData = weeklyHistory.map((w) => {
+    const [, m, d] = w.weekStart.split("-");
+    return {
+      week: `${d}.${m}`,
+      points: Math.round(w.points),
+    };
+  });
 
   const monthlyData = monthlyHistory.map((m) => ({
     month: MONTH_NAMES[m.month.slice(5)] ?? m.month.slice(5),
