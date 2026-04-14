@@ -4,7 +4,7 @@ import { getDb } from "./db/database";
 import { account, session, user, verification } from "./drizzle-out/auth-schema";
 import { createMemberProfile } from "./queries/members";
 
-const ADMIN_EMAILS = ["arekjuve@googlemail.com", "arekjuve@gmail.com", "kamilkiliasinski@gmail.com"];
+const ADMIN_EMAILS = ["arekjuve@googlemail.com", "arekjuve@gmail.com", "kamilkiliasinski@gmail.com", "ad@emspro.pl"];
 
 export function createBetterAuth(
   database: NonNullable<Parameters<typeof betterAuth>[0]>["database"],
