@@ -100,23 +100,29 @@ export async function getWeeklyPointsHistory(memberId: string) {
   const today = new Date();
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
-  // Compute the 8 week ranges
-  const weekRanges: { weekStart: string; weekEnd: string }[] = [];
+  // Compute 8 Monday-based weeks (Mon-Sun)
+  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ...
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const thisMonday = new Date(today);
+  thisMonday.setDate(today.getDate() + mondayOffset);
+
+  const weekMondays: string[] = [];
   for (let i = 7; i >= 0; i--) {
-    const weekEnd = new Date(today);
-    weekEnd.setDate(today.getDate() - today.getDay() + 1 - (i - 1) * 7);
-    const weekStart = new Date(weekEnd);
-    weekStart.setDate(weekEnd.getDate() - 6);
-    weekRanges.push({ weekStart: fmt(weekStart), weekEnd: fmt(weekEnd) });
+    const monday = new Date(thisMonday);
+    monday.setDate(thisMonday.getDate() - i * 7);
+    weekMondays.push(fmt(monday));
   }
 
-  const earliest = weekRanges[0].weekStart;
-  const latest = weekRanges[weekRanges.length - 1].weekEnd;
+  const earliest = weekMondays[0];
+  const lastMonday = weekMondays[weekMondays.length - 1];
+  const lastSunday = new Date(lastMonday);
+  lastSunday.setDate(lastSunday.getDate() + 6);
+  const latest = fmt(lastSunday);
 
-  // Single query: group by week using strftime
+  // Single query: group by Monday of each week (SQLite)
   const rows = await db
     .select({
-      weekStart: sql<string>`date(${trainingSession.sessionDate}, 'weekday 1', '-7 days')`,
+      weekMonday: sql<string>`date(${trainingSession.sessionDate}, 'weekday 1', '-7 days')`,
       points: sql<number>`sum(${trainingSession.correctedPoints})`,
     })
     .from(trainingSession)
@@ -130,13 +136,17 @@ export async function getWeeklyPointsHistory(memberId: string) {
     )
     .groupBy(sql`date(${trainingSession.sessionDate}, 'weekday 1', '-7 days')`);
 
-  const pointsMap = new Map(rows.map((r) => [r.weekStart, r.points]));
+  const pointsMap = new Map(rows.map((r) => [r.weekMonday, r.points]));
 
-  return weekRanges.map((w) => ({
-    weekStart: w.weekStart,
-    weekEnd: w.weekEnd,
-    points: pointsMap.get(w.weekStart) ?? 0,
-  }));
+  return weekMondays.map((monday) => {
+    const sun = new Date(monday);
+    sun.setDate(sun.getDate() + 6);
+    return {
+      weekStart: monday,
+      weekEnd: fmt(sun),
+      points: pointsMap.get(monday) ?? 0,
+    };
+  });
 }
 
 export async function getMonthlyPointsHistory(memberId: string) {
