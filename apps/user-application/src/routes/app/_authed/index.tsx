@@ -34,6 +34,7 @@ import {
   IconTrophy,
   IconCalendar,
   IconFlame,
+  IconChartBar,
   IconBuildingCommunity,
   IconMapPin,
   IconFlag,
@@ -131,6 +132,10 @@ function DashboardPage() {
     trpc.leaderboard.getMyClubInfo.queryOptions(),
   );
 
+  const avgPoints = stats.totalSessions > 0
+    ? (stats.totalPoints / stats.totalSessions).toFixed(1)
+    : "0";
+
   const statCards = [
     {
       title: "Wszystkie sesje",
@@ -145,6 +150,14 @@ function DashboardPage() {
       description: "Łącznie",
       icon: IconBolt,
       iconClass: "text-primary",
+      suffix: "pkt",
+    },
+    {
+      title: "Średnia pkt/sesję",
+      value: avgPoints,
+      description: "Punkty skorygowane",
+      icon: IconChartBar,
+      iconClass: "text-violet-500",
       suffix: "pkt",
     },
     {
@@ -236,7 +249,7 @@ function DashboardPage() {
       <Separator />
 
       {/* Stat cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {statCards.map((card) => (
           <Card key={card.title}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
