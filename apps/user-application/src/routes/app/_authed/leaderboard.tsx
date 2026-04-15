@@ -58,6 +58,10 @@ function LeaderboardTable({
 
   const trophy = ["🥇", "🥈", "🥉"];
 
+  const showClub = scope === "city";
+  const showCity = scope === "country";
+  const colSpan = 4 + (showClub || showCity ? 1 : 0);
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -65,6 +69,8 @@ function LeaderboardTable({
           <TableRow>
             <TableHead className="w-16">Miejsce</TableHead>
             <TableHead>Uczestnik</TableHead>
+            {showClub && <TableHead>Klub</TableHead>}
+            {showCity && <TableHead>Miasto</TableHead>}
             <TableHead className="text-right">Sesje</TableHead>
             <TableHead className="text-right">Łączne punkty</TableHead>
           </TableRow>
@@ -72,7 +78,7 @@ function LeaderboardTable({
         <TableBody>
           {board.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
+              <TableCell colSpan={colSpan} className="text-center h-24 text-muted-foreground">
                 Brak danych dla tego okresu.
               </TableCell>
             </TableRow>
@@ -105,6 +111,16 @@ function LeaderboardTable({
                       )}
                     </div>
                   </TableCell>
+                  {showClub && (
+                    <TableCell className="text-muted-foreground text-sm">
+                      {entry.clubName ?? "—"}
+                    </TableCell>
+                  )}
+                  {showCity && (
+                    <TableCell className="text-muted-foreground text-sm">
+                      {entry.cityName ?? "—"}
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">{entry.sessions}</TableCell>
                   <TableCell className="text-right font-mono">
                     {entry.totalScore.toFixed(1)}

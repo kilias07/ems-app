@@ -47,29 +47,18 @@ export async function getLeaderboard(
     filters.push(eq(clubPlace.city, scopeKey));
   }
 
-  const needsClubJoin = scope === "city";
-
-  const baseQuery = db
+  const rows = await db
     .select({
       memberId: trainingSession.memberId,
       totalScore: sql<number>`sum(${trainingSession.correctedPoints})`,
       sessions: sql<number>`count(*)`,
     })
     .from(trainingSession)
-    .innerJoin(memberProfile, eq(trainingSession.memberId, memberProfile.id));
-
-  const query = needsClubJoin
-    ? baseQuery
-        .innerJoin(clubPlace, eq(memberProfile.clubPlaceId, clubPlace.id))
-        .where(and(...filters))
-        .groupBy(trainingSession.memberId)
-        .orderBy(sql`sum(${trainingSession.correctedPoints}) DESC`)
-    : baseQuery
-        .where(and(...filters))
-        .groupBy(trainingSession.memberId)
-        .orderBy(sql`sum(${trainingSession.correctedPoints}) DESC`);
-
-  const rows = await query;
+    .innerJoin(memberProfile, eq(trainingSession.memberId, memberProfile.id))
+    .leftJoin(clubPlace, eq(memberProfile.clubPlaceId, clubPlace.id))
+    .where(and(...filters))
+    .groupBy(trainingSession.memberId)
+    .orderBy(sql`sum(${trainingSession.correctedPoints}) DESC`);
 
   if (rows.length === 0) return [];
 
@@ -80,19 +69,33 @@ export async function getLeaderboard(
       id: memberProfile.id,
       nickname: memberProfile.nickname,
       avatarUrl: memberProfile.avatarUrl,
+      clubPlaceId: memberProfile.clubPlaceId,
     })
     .from(memberProfile)
     .where(inArray(memberProfile.id, memberIds));
 
+  const clubIds = [...new Set(profiles.map((p) => p.clubPlaceId).filter(Boolean))] as string[];
+  const clubs =
+    clubIds.length > 0
+      ? await db
+          .select({ id: clubPlace.id, name: clubPlace.name, city: clubPlace.city })
+          .from(clubPlace)
+          .where(inArray(clubPlace.id, clubIds))
+      : [];
+
   const profileMap = new Map(profiles.map((p) => [p.id, p]));
+  const clubMap = new Map(clubs.map((c) => [c.id, c]));
 
   return rows.map((row, index) => {
     const profile = profileMap.get(row.memberId);
+    const club = profile?.clubPlaceId ? clubMap.get(profile.clubPlaceId) : null;
     return {
       rank: index + 1,
       memberId: row.memberId,
       nickname: profile?.nickname ?? "Unknown",
       avatarUrl: profile?.avatarUrl ?? null,
+      clubName: club?.name ?? null,
+      cityName: club?.city ?? null,
       totalScore: row.totalScore ?? 0,
       sessions: row.sessions ?? 0,
     };
