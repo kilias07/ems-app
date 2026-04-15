@@ -43,6 +43,10 @@ export function LoginPopup({ children }: LoginPopupProps) {
   const [signInError, setSignInError] = useState<string | null>(null);
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [registered, setRegistered] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
 
   const [signInEmail, setSignInEmail] = useState("");
   const [signInPassword, setSignInPassword] = useState("");
@@ -189,7 +193,87 @@ export function LoginPopup({ children }: LoginPopupProps) {
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Logowanie…" : "Zaloguj się"}
               </Button>
+              <button
+                type="button"
+                className="w-full text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                onClick={() => {
+                  setForgotMode(true);
+                  setForgotEmail(signInEmail);
+                  setForgotSent(false);
+                  setForgotError(null);
+                }}
+              >
+                Zapomniałeś hasła?
+              </button>
             </form>
+
+            {/* Forgot password modal overlay */}
+            {forgotMode && (
+              <div className="absolute inset-0 bg-background rounded-lg p-6 flex flex-col justify-center space-y-4">
+                {forgotSent ? (
+                  <div className="text-center space-y-2">
+                    <p className="text-lg font-semibold">Sprawdź swój e-mail</p>
+                    <p className="text-sm text-muted-foreground">
+                      Jeśli konto z adresem <strong>{forgotEmail}</strong> istnieje, wysłaliśmy link do resetowania hasła.
+                    </p>
+                    <button
+                      className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground mt-4"
+                      onClick={() => setForgotMode(false)}
+                    >
+                      Wróć do logowania
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-1">
+                      <p className="text-lg font-semibold">Resetowanie hasła</p>
+                      <p className="text-sm text-muted-foreground">
+                        Podaj adres e-mail powiązany z Twoim kontem.
+                      </p>
+                    </div>
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        setLoading(true);
+                        setForgotError(null);
+                        const { error } = await authClient.requestPasswordReset({
+                          email: forgotEmail,
+                          redirectTo: "/reset-password",
+                        });
+                        if (error) {
+                          setForgotError("Wystąpił błąd. Spróbuj ponownie.");
+                        } else {
+                          setForgotSent(true);
+                        }
+                        setLoading(false);
+                      }}
+                      className="space-y-3"
+                    >
+                      <Input
+                        type="email"
+                        placeholder="ty@przykład.pl"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        required
+                        autoFocus
+                      />
+                      {forgotError && (
+                        <p className="text-sm text-destructive">{forgotError}</p>
+                      )}
+                      <Button type="submit" className="w-full" disabled={loading}>
+                        {loading ? "Wysyłanie…" : "Wyślij link resetujący"}
+                      </Button>
+                    </form>
+                    <button
+                      className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                      onClick={() => setForgotMode(false)}
+                    >
+                      Wróć do logowania
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           {/* ── Register ── */}

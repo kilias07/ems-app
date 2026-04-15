@@ -16,6 +16,41 @@ export function createBetterAuth(
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
+      sendResetPassword: email
+        ? async ({ user, url }: { user: { email: string }; url: string }) => {
+            void fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${email.apiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                from: email.from,
+                to: user.email,
+                subject: "Resetowanie hasła — EMS Studio",
+                html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:sans-serif;background:#f9fafb;margin:0;padding:40px 20px">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
+    <h1 style="margin:0 0 8px;font-size:24px;color:#111">Resetowanie hasła</h1>
+    <p style="color:#555;margin:0 0 32px;font-size:15px;line-height:1.5">
+      Kliknij poniższy przycisk, aby ustawić nowe hasło do swojego konta w EMS Studio.
+    </p>
+    <a href="${url}"
+       style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600">
+      Ustaw nowe hasło
+    </a>
+    <p style="color:#999;margin:32px 0 0;font-size:13px">
+      Jeśli nie prosiłeś o reset hasła, zignoruj tę wiadomość.
+    </p>
+  </div>
+</body>
+</html>`,
+              }),
+            });
+          }
+        : undefined,
     },
     emailVerification: {
       sendOnSignUp: true,
