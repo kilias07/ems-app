@@ -18,7 +18,8 @@ export function createBetterAuth(
       requireEmailVerification: true,
       sendResetPassword: email
         ? async ({ user, url }: { user: { email: string }; url: string }) => {
-            void fetch("https://api.resend.com/emails", {
+            console.log(`[auth] Sending password reset email to ${user.email}`);
+            const res = await fetch("https://api.resend.com/emails", {
               method: "POST",
               headers: {
                 Authorization: `Bearer ${email.apiKey}`,
@@ -49,6 +50,12 @@ export function createBetterAuth(
 </html>`,
               }),
             });
+            if (!res.ok) {
+              const text = await res.text();
+              console.error(`[auth] Reset email error ${res.status}: ${text}`);
+            } else {
+              console.log(`[auth] Password reset email sent to ${user.email}`);
+            }
           }
         : undefined,
     },
