@@ -170,7 +170,6 @@ export const Route = createFileRoute("/app/_authed/leaderboard")({
 
 function LeaderboardPage() {
   const [period, setPeriod] = useState<Period>("all");
-  const [scope, setScope] = useState<Scope>("club");
 
   const { data: profile } = useSuspenseQuery({
     ...trpc.profile.getMyProfile.queryOptions(),
@@ -181,6 +180,13 @@ function LeaderboardPage() {
     ...trpc.leaderboard.getMyClubInfo.queryOptions(),
     staleTime: 5 * 60 * 1000,
   });
+
+  const initialScope: Scope = !profile.clubPlaceId
+    ? "country"
+    : profile.clubPlaceId === "home"
+      ? "city"
+      : "club";
+  const [scope, setScope] = useState<Scope>(initialScope);
 
   const periodKey =
     period === "monthly"
@@ -197,6 +203,8 @@ function LeaderboardPage() {
         : undefined;
 
   const noClub = !profile.clubPlaceId;
+  const isHome = profile.clubPlaceId === "home";
+  const noCity = !clubPlaces?.city;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -205,10 +213,10 @@ function LeaderboardPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Tabs value={scope} onValueChange={(v) => setScope(v as Scope)}>
           <TabsList>
-            <TabsTrigger value="club" disabled={noClub}>
+            <TabsTrigger value="club" disabled={noClub || isHome}>
               Klub
             </TabsTrigger>
-            <TabsTrigger value="city" disabled={noClub}>
+            <TabsTrigger value="city" disabled={noClub || noCity}>
               Miasto
             </TabsTrigger>
             <TabsTrigger value="country">Kraj</TabsTrigger>

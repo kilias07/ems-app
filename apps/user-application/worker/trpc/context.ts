@@ -26,6 +26,7 @@ export async function createContext({
       avatarUrl: profile?.avatarUrl ?? null,
       suitSize: profile?.suitSize ?? null,
       clubPlaceId: profile?.clubPlaceId ?? null,
+      city: profile?.city ?? null,
     },
   };
 }

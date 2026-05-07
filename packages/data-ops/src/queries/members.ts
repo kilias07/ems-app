@@ -144,11 +144,15 @@ export async function assignTrainerToUser(userId: string, trainerId: string | nu
     .where(eq(memberProfile.id, userId));
 }
 
-export async function assignClubPlaceToUser(userId: string, clubPlaceId: string | null) {
+export async function assignClubPlaceToUser(
+  userId: string,
+  clubPlaceId: string | null,
+  city: string | null,
+) {
   const db = getDb();
   await db
     .update(memberProfile)
-    .set({ clubPlaceId })
+    .set({ clubPlaceId, city })
     .where(eq(memberProfile.id, userId));
 }
 

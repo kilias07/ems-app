@@ -89,9 +89,17 @@ export const adminRoutes = t.router({
     }),
 
   assignClubPlace: trainerProcedure
-    .input(z.object({ userId: z.string(), clubPlaceId: z.string().nullable() }))
+    .input(
+      z.object({
+        userId: z.string(),
+        clubPlaceId: z.string().nullable(),
+        city: z.string().nullable().optional(),
+      }),
+    )
     .mutation(async ({ input }) => {
-      await assignClubPlaceToUser(input.userId, input.clubPlaceId);
+      const city =
+        input.clubPlaceId === "home" && input.city ? input.city.trim() : null;
+      await assignClubPlaceToUser(input.userId, input.clubPlaceId, city);
       return { success: true };
     }),
 

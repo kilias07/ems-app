@@ -15,7 +15,7 @@ export const leaderboardRoutes = t.router({
     const clubPlaceId = ctx.userInfo.clubPlaceId;
     if (!clubPlaceId) return null;
     if (clubPlaceId === HOME_CLUB_ID) {
-      return { id: HOME_CLUB_ID, name: HOME_CLUB_NAME, city: null };
+      return { id: HOME_CLUB_ID, name: HOME_CLUB_NAME, city: ctx.userInfo.city };
     }
     const club = await getClubPlaceById(clubPlaceId);
     if (!club) return null;
@@ -51,7 +51,9 @@ export const leaderboardRoutes = t.router({
       const clubPlaceId = ctx.userInfo.clubPlaceId;
       let city: string | null = null;
 
-      if (clubPlaceId && clubPlaceId !== HOME_CLUB_ID) {
+      if (clubPlaceId === HOME_CLUB_ID) {
+        city = ctx.userInfo.city;
+      } else if (clubPlaceId) {
         const club = await getClubPlaceById(clubPlaceId);
         city = club?.city ?? null;
       }

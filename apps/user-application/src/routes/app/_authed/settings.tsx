@@ -26,6 +26,9 @@ export const Route = createFileRoute("/app/_authed/settings")({
       context.queryClient.prefetchQuery(
         context.trpc.profile.listClubPlaces.queryOptions(),
       ),
+      context.queryClient.prefetchQuery(
+        context.trpc.profile.listRankingCities.queryOptions(),
+      ),
     ]);
   },
   component: SettingsPage,
@@ -52,13 +55,16 @@ function SettingsPage() {
 
   // ── Club place ─────────────────────────────────────────────────────────────
   const { data: clubPlaces } = useQuery(trpc.profile.listClubPlaces.queryOptions());
+  const { data: rankingCities } = useQuery(trpc.profile.listRankingCities.queryOptions());
   const [clubPlaceId, setClubPlaceId] = useState("");
+  const [homeCity, setHomeCity] = useState("");
 
   const updateClub = useMutation(
     trpc.profile.updateMyClubPlace.mutationOptions({
       onSuccess: () => {
         toast.success("Klub zaktualizowany.");
         setClubPlaceId("");
+        setHomeCity("");
         queryClient.invalidateQueries({ queryKey: trpc.profile.getMyProfile.queryKey() });
         queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getMyClubInfo.queryKey() });
         queryClient.invalidateQueries({ queryKey: trpc.leaderboard.getMyRanks.queryKey() });
@@ -163,44 +169,80 @@ function SettingsPage() {
       <Separator />
 
       {/* Club place */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-base font-semibold">Klub</h2>
-          <p className="text-sm text-muted-foreground">
-            Wybierz klub, do którego należysz. Wpływa na ranking klubowy i miejski.
-          </p>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="club-place">Twój klub</Label>
-          <Select
-            value={clubPlaceId || profile?.clubPlaceId || ""}
-            onValueChange={setClubPlaceId}
-          >
-            <SelectTrigger id="club-place" className="w-72">
-              <SelectValue placeholder="Wybierz klub…" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={HOME_CLUB_ID}>
-                {HOME_CLUB_NAME}
-              </SelectItem>
-              {clubPlaces?.map((cp) => (
-                <SelectItem key={cp.id} value={cp.id}>
-                  {cp.name}
-                  <span className="ml-2 text-muted-foreground text-xs">
-                    {cp.city}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <Button
-          disabled={!clubPlaceId || clubPlaceId === profile?.clubPlaceId || updateClub.isPending}
-          onClick={() => updateClub.mutate({ clubPlaceId })}
-        >
-          {updateClub.isPending ? "Zapisywanie…" : "Zaktualizuj klub"}
-        </Button>
-      </section>
+      {(() => {
+        const effectiveClubId = clubPlaceId || profile?.clubPlaceId || "";
+        const effectiveCity = homeCity || profile?.city || "";
+        const isHome = effectiveClubId === HOME_CLUB_ID;
+        const clubChanged = clubPlaceId !== "" && clubPlaceId !== profile?.clubPlaceId;
+        const cityChanged = isHome && homeCity !== "" && homeCity !== profile?.city;
+        const canSave =
+          (clubChanged || cityChanged) &&
+          (!isHome || !!effectiveCity) &&
+          !updateClub.isPending;
+
+        return (
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-base font-semibold">Klub</h2>
+              <p className="text-sm text-muted-foreground">
+                Wybierz klub, do którego należysz. Wpływa na ranking klubowy i miejski.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="club-place">Twój klub</Label>
+              <Select value={effectiveClubId} onValueChange={setClubPlaceId}>
+                <SelectTrigger id="club-place" className="w-72">
+                  <SelectValue placeholder="Wybierz klub…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={HOME_CLUB_ID}>{HOME_CLUB_NAME}</SelectItem>
+                  {clubPlaces?.map((cp) => (
+                    <SelectItem key={cp.id} value={cp.id}>
+                      {cp.name}
+                      <span className="ml-2 text-muted-foreground text-xs">{cp.city}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {isHome && (
+              <div className="space-y-2">
+                <Label htmlFor="home-city">
+                  Najbliższe miasto rankingowe <span className="text-destructive">*</span>
+                </Label>
+                <Select value={effectiveCity} onValueChange={setHomeCity}>
+                  <SelectTrigger id="home-city" className="w-72">
+                    <SelectValue placeholder="Wybierz miasto…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rankingCities?.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Trenujesz w domu — wybierz miasto, w którego rankingu chcesz brać udział.
+                </p>
+              </div>
+            )}
+
+            <Button
+              disabled={!canSave}
+              onClick={() =>
+                updateClub.mutate({
+                  clubPlaceId: effectiveClubId,
+                  city: isHome ? effectiveCity : null,
+                })
+              }
+            >
+              {updateClub.isPending ? "Zapisywanie…" : "Zaktualizuj klub"}
+            </Button>
+          </section>
+        );
+      })()}
 
       <Separator />
 

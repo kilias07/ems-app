@@ -66,11 +66,13 @@ function SetupProfilePage() {
   const [raw, setRaw] = useState("");
   const [suitSize, setSuitSize] = useState("");
   const [clubPlaceId, setClubPlaceId] = useState("");
+  const [homeCity, setHomeCity] = useState("");
   const [error, setError] = useState("");
 
   const nickname = slugify(raw);
 
   const { data: clubPlaces } = useQuery(trpc.profile.listClubPlaces.queryOptions());
+  const { data: rankingCities } = useQuery(trpc.profile.listRankingCities.queryOptions());
 
   const updateNickname = useMutation(
     trpc.profile.updateNickname.mutationOptions(),
@@ -96,7 +98,16 @@ function SetupProfilePage() {
         promises.push(updateSuit.mutateAsync({ suitSize: suitSize as any }));
       }
       if (clubPlaceId) {
-        promises.push(updateClub.mutateAsync({ clubPlaceId }));
+        if (clubPlaceId === HOME_CLUB_ID && !homeCity) {
+          setError("Wybierz najbliższe miasto rankingowe dla treningu w domu.");
+          return;
+        }
+        promises.push(
+          updateClub.mutateAsync({
+            clubPlaceId,
+            city: clubPlaceId === HOME_CLUB_ID ? homeCity : null,
+          }),
+        );
       }
       if (promises.length > 0) {
         await Promise.all(promises);
@@ -211,6 +222,30 @@ function SetupProfilePage() {
                 Wpływa na ranking klubowy i miejski. Możesz zmienić później.
               </p>
             </div>
+
+            {/* Home city — only when training at home */}
+            {clubPlaceId === HOME_CLUB_ID && (
+              <div className="space-y-2">
+                <Label htmlFor="home-city">
+                  Najbliższe miasto rankingowe <span className="text-destructive">*</span>
+                </Label>
+                <Select value={homeCity} onValueChange={setHomeCity}>
+                  <SelectTrigger id="home-city">
+                    <SelectValue placeholder="Wybierz miasto…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rankingCities?.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Trenujesz w domu — wybierz miasto, w którego rankingu chcesz brać udział.
+                </p>
+              </div>
+            )}
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 

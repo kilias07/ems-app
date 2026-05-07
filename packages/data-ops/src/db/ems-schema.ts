@@ -24,6 +24,7 @@ export const memberProfile = sqliteTable("member_profile", {
   avatarUrl: text("avatar_url"),
   trainerId: text("trainer_id"), // FK to member_profile (linked trainer)
   clubPlaceId: text("club_place_id"), // FK to club_place
+  city: text("city"), // ranking city (set when clubPlaceId === HOME_CLUB_ID; otherwise derived from club)
   joinedAt: text("joined_at")
     .notNull()
     .default(sql`(datetime('now'))`),

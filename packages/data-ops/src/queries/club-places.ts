@@ -1,10 +1,20 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db/database";
 import { clubPlace } from "../db/ems-schema";
 
 export async function getAllClubPlaces() {
   const db = getDb();
   return db.select().from(clubPlace).orderBy(clubPlace.name);
+}
+
+export async function getRankingCities(): Promise<string[]> {
+  const db = getDb();
+  const rows = await db
+    .selectDistinct({ city: clubPlace.city })
+    .from(clubPlace)
+    .where(sql`${clubPlace.city} != ''`)
+    .orderBy(clubPlace.city);
+  return rows.map((r) => r.city);
 }
 
 export async function getClubPlaceById(id: string) {

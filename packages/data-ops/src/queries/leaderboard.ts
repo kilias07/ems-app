@@ -1,6 +1,7 @@
-import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, or, sql } from "drizzle-orm";
 import { getDb } from "../db/database";
 import { clubPlace, memberProfile, trainingSession } from "../db/ems-schema";
+import { HOME_CLUB_ID } from "../utils/suit-multipliers";
 
 export type LeaderboardPeriod = "all" | "monthly" | "weekly";
 export type LeaderboardScope = "club" | "city" | "country";
@@ -44,7 +45,15 @@ export async function getLeaderboard(
   if (scope === "club" && scopeKey) {
     filters.push(eq(memberProfile.clubPlaceId, scopeKey));
   } else if (scope === "city" && scopeKey) {
-    filters.push(eq(clubPlace.city, scopeKey));
+    // Match users via their club's city (real club) OR via their own city (home users)
+    const cityMatch = or(
+      eq(clubPlace.city, scopeKey),
+      and(
+        eq(memberProfile.clubPlaceId, HOME_CLUB_ID),
+        eq(memberProfile.city, scopeKey),
+      ),
+    );
+    if (cityMatch) filters.push(cityMatch);
   }
 
   const rows = await db
@@ -70,6 +79,7 @@ export async function getLeaderboard(
       nickname: memberProfile.nickname,
       avatarUrl: memberProfile.avatarUrl,
       clubPlaceId: memberProfile.clubPlaceId,
+      city: memberProfile.city,
     })
     .from(memberProfile)
     .where(inArray(memberProfile.id, memberIds));
@@ -95,7 +105,7 @@ export async function getLeaderboard(
       nickname: profile?.nickname ?? "Unknown",
       avatarUrl: profile?.avatarUrl ?? null,
       clubName: club?.name ?? null,
-      cityName: club?.city ?? null,
+      cityName: club?.city ?? profile?.city ?? null,
       totalScore: row.totalScore ?? 0,
       sessions: row.sessions ?? 0,
     };

@@ -9,7 +9,8 @@ import {
   setMemberActive,
   assignClubPlaceToUser,
 } from "@repo/data-ops/queries/members";
-import { getAllClubPlaces } from "@repo/data-ops/queries/club-places";
+import { getAllClubPlaces, getRankingCities } from "@repo/data-ops/queries/club-places";
+import { HOME_CLUB_ID } from "@repo/data-ops/utils/suit-multipliers";
 import { getNotesForUser } from "@repo/data-ops/queries/notes";
 import { getUserById } from "@repo/data-ops/queries/auth-user";
 import { sendEmail } from "@/worker/lib/email";
@@ -26,6 +27,7 @@ export const profileRoutes = t.router({
       avatarUrl: ctx.userInfo.avatarUrl,
       suitSize: ctx.userInfo.suitSize,
       clubPlaceId: ctx.userInfo.clubPlaceId,
+      city: ctx.userInfo.city,
     };
   }),
 
@@ -79,10 +81,31 @@ export const profileRoutes = t.router({
     return getAllClubPlaces();
   }),
 
+  listRankingCities: t.procedure.query(async () => {
+    return getRankingCities();
+  }),
+
   updateMyClubPlace: t.procedure
-    .input(z.object({ clubPlaceId: z.string().nullable() }))
+    .input(
+      z.object({
+        clubPlaceId: z.string().nullable(),
+        city: z.string().nullable().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      await assignClubPlaceToUser(ctx.userInfo.userId, input.clubPlaceId);
+      // For home users, city is required and used directly.
+      // For real-club users, city is derived from clubPlace at query time, so we store NULL.
+      if (input.clubPlaceId === HOME_CLUB_ID) {
+        if (!input.city || !input.city.trim()) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Wybierz miasto rankingowe dla treningu w domu.",
+          });
+        }
+        await assignClubPlaceToUser(ctx.userInfo.userId, HOME_CLUB_ID, input.city.trim());
+      } else {
+        await assignClubPlaceToUser(ctx.userInfo.userId, input.clubPlaceId, null);
+      }
       return { success: true };
     }),
 
