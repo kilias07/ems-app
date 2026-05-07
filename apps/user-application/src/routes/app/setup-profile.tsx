@@ -51,6 +51,10 @@ export const Route = createFileRoute("/app/setup-profile")({
 
 function slugify(value: string): string {
   return value
+    .replace(/ł/g, "l")
+    .replace(/Ł/g, "L")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "")
@@ -169,6 +173,11 @@ function SetupProfilePage() {
                 <p className="text-xs text-muted-foreground">
                   Zostanie zapisane jako:{" "}
                   <span className="font-medium text-foreground">{nickname}</span>
+                </p>
+              )}
+              {raw.trim().length > 0 && nickname.length < 2 && (
+                <p className="text-sm text-destructive">
+                  Pseudonim musi mieć min. 2 znaki (litery łacińskie lub cyfry, polskie znaki dozwolone — zostaną zamienione).
                 </p>
               )}
               <p className="text-xs text-muted-foreground">

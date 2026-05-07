@@ -73,6 +73,12 @@ export const profileRoutes = t.router({
   updateSuitSize: t.procedure
     .input(z.object({ suitSize: z.enum(["R0", "R1", "RW2", "R2", "R3", "R4", "R5"]) }))
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.userInfo.nickname) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Najpierw ustaw pseudonim.",
+        });
+      }
       await updateSuitSize(ctx.userInfo.userId, input.suitSize);
       return { success: true };
     }),
@@ -93,6 +99,12 @@ export const profileRoutes = t.router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.userInfo.nickname) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Najpierw ustaw pseudonim.",
+        });
+      }
       // For home users, city is required and used directly.
       // For real-club users, city is derived from clubPlace at query time, so we store NULL.
       if (input.clubPlaceId === HOME_CLUB_ID) {

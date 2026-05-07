@@ -36,6 +36,10 @@ export const Route = createFileRoute("/app/_authed/settings")({
 
 function slugify(value: string): string {
   return value
+    .replace(/ł/g, "l")
+    .replace(/Ł/g, "L")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "")
