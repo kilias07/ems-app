@@ -25,16 +25,20 @@ export async function runWeeklySummary(env: Env): Promise<void> {
         getMemberRank(member.id, "all"),
       ]);
 
-      const html = weeklySummaryEmailHtml(member.nickname!, {
-        weekSessions: stats.weekSessions,
-        weekPoints: stats.weekPoints,
-        totalPoints: stats.totalPoints,
-        rank: rankEntry?.rank ?? null,
-      });
+      const html = weeklySummaryEmailHtml(
+        member.nickname!,
+        {
+          weekSessions: stats.weekSessions,
+          weekPoints: stats.weekPoints,
+          totalPoints: stats.totalPoints,
+          rank: rankEntry?.rank ?? null,
+        },
+        env.BETTER_AUTH_URL,
+      );
 
       await sendEmail({
-        apiKey: env.RESEND_API_KEY,
-        from: env.RESEND_FROM_EMAIL,
+        binding: env.EMAIL,
+        from: env.FROM_EMAIL,
         to: email,
         subject: "Twoje podsumowanie tygodnia — EMS Studio",
         html,

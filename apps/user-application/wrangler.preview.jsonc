@@ -15,9 +15,17 @@
     "enabled": true
   },
 
+  "routes": [
+    { "pattern": "preview.ems-ranking.pl", "custom_domain": true }
+  ],
+
   "vars": {
-    "RESEND_FROM_EMAIL": "noreply@ems360.pl"
+    "FROM_EMAIL": "noreply@ems-ranking.pl"
   },
+
+  "send_email": [
+    { "name": "EMAIL" }
+  ],
 
   "d1_databases": [
     {

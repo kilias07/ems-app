@@ -17,9 +17,10 @@ const getAuthInstance = (env: Env) => {
       clientSecret: env.GOOGLE_CLIENT_SECRET,
     },
     {
-      apiKey: env.RESEND_API_KEY,
-      from: env.RESEND_FROM_EMAIL,
+      binding: env.EMAIL,
+      from: env.FROM_EMAIL,
     },
+    env.BETTER_AUTH_URL,
   );
 };
 

@@ -4,28 +4,38 @@ import { getDb } from "./db/database";
 import { account, session, user, verification } from "./drizzle-out/auth-schema";
 import { createMemberProfile } from "./queries/members";
 
-const ADMIN_EMAILS = ["arekjuve@googlemail.com", "arekjuve@gmail.com", "kamilkiliasinski@gmail.com", "ad@emspro.pl"];
+const ADMIN_EMAILS = ["kamilkiliasinski@gmail.com", "ad@emspro.pl"];
+
+/**
+ * Structural type matching Cloudflare's `send_email` binding (Email Service public beta).
+ * Kept here (rather than imported) so this package has no Workers-types dependency.
+ */
+export type EmailBinding = {
+  send: (params: {
+    from: string;
+    to: string;
+    subject: string;
+    html: string;
+  }) => Promise<unknown>;
+};
 
 export function createBetterAuth(
   database: NonNullable<Parameters<typeof betterAuth>[0]>["database"],
   google?: { clientId: string; clientSecret: string },
-  email?: { apiKey: string; from: string },
+  email?: { binding: EmailBinding; from: string },
+  baseUrl?: string,
 ) {
   return betterAuth({
     database,
+    baseURL: baseUrl,
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
       sendResetPassword: email
         ? async ({ user, url }: { user: { email: string }; url: string }) => {
             console.log(`[auth] Sending password reset email to ${user.email}`);
-            const res = await fetch("https://api.resend.com/emails", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${email.apiKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
+            try {
+              await email.binding.send({
                 from: email.from,
                 to: user.email,
                 subject: "Resetowanie hasła — EMS Studio",
@@ -48,13 +58,10 @@ export function createBetterAuth(
   </div>
 </body>
 </html>`,
-              }),
-            });
-            if (!res.ok) {
-              const text = await res.text();
-              console.error(`[auth] Reset email error ${res.status}: ${text}`);
-            } else {
+              });
               console.log(`[auth] Password reset email sent to ${user.email}`);
+            } catch (err) {
+              console.error(`[auth] Reset email error:`, err);
             }
           }
         : undefined,
@@ -69,13 +76,8 @@ export function createBetterAuth(
             verifyUrl.searchParams.set("callbackURL", "/app/setup-profile?verified=1");
             const finalUrl = verifyUrl.toString();
             console.log(`[auth] Sending verification email to ${user.email}`);
-            const res = await fetch("https://api.resend.com/emails", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${email.apiKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
+            try {
+              await email.binding.send({
                 from: email.from,
                 to: user.email,
                 subject: "Zweryfikuj swój adres e-mail — EMS Studio",
@@ -98,13 +100,10 @@ export function createBetterAuth(
   </div>
 </body>
 </html>`,
-              }),
-            });
-            if (!res.ok) {
-              const text = await res.text();
-              console.error(`[auth] Resend error ${res.status}: ${text}`);
-            } else {
+              });
               console.log(`[auth] Verification email sent to ${user.email}`);
+            } catch (err) {
+              console.error(`[auth] Verification email error:`, err);
             }
           }
         : undefined,
@@ -141,7 +140,8 @@ export function createBetterAuth(
 
 export function getAuth(
   google: { clientId: string; clientSecret: string },
-  email?: { apiKey: string; from: string },
+  email?: { binding: EmailBinding; from: string },
+  baseUrl?: string,
 ) {
   return createBetterAuth(
     drizzleAdapter(getDb(), {
@@ -155,5 +155,6 @@ export function getAuth(
     }),
     google,
     email,
+    baseUrl,
   );
 }

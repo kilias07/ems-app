@@ -20,7 +20,7 @@ export function verificationEmailHtml(url: string): string {
 </html>`;
 }
 
-export function welcomeEmailHtml(nickname: string): string {
+export function welcomeEmailHtml(nickname: string, baseUrl: string): string {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -30,7 +30,7 @@ export function welcomeEmailHtml(nickname: string): string {
     <p style="color:#555;margin:0 0 24px;font-size:15px;line-height:1.5">
       Twoje konto jest gotowe. Możesz teraz śledzić swoje sesje, punkty i rywalizować w rankingu.
     </p>
-    <a href="/app"
+    <a href="${baseUrl}/app"
        style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600">
       Przejdź do panelu
     </a>
@@ -39,7 +39,7 @@ export function welcomeEmailHtml(nickname: string): string {
 </html>`;
 }
 
-export function accountApprovedEmailHtml(nickname: string | null): string {
+export function accountApprovedEmailHtml(nickname: string | null, baseUrl: string): string {
   const greeting = nickname ? `Cześć ${nickname}!` : "Cześć!";
   return `<!DOCTYPE html>
 <html>
@@ -50,7 +50,7 @@ export function accountApprovedEmailHtml(nickname: string | null): string {
     <p style="color:#555;margin:0 0 24px;font-size:15px;line-height:1.5">
       Twoje konto w EMS Studio zostało zatwierdzone. Możesz teraz korzystać z aplikacji — śledzić swoje treningi, punkty i pozycję w rankingu.
     </p>
-    <a href="/app"
+    <a href="${baseUrl}/app"
        style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600">
       Przejdź do aplikacji
     </a>
@@ -67,6 +67,7 @@ export function weeklySummaryEmailHtml(
     totalPoints: number;
     rank: number | null;
   },
+  baseUrl: string,
 ): string {
   const rankText =
     stats.rank != null ? `#${stats.rank} w rankingu ogólnym` : "jeszcze bez rankingu";
@@ -100,7 +101,7 @@ export function weeklySummaryEmailHtml(
 
     <p style="color:#555;font-size:14px;margin:0 0 24px">Twoja aktualna pozycja: ${rankText}.</p>
 
-    <a href="/app/leaderboard"
+    <a href="${baseUrl}/app/leaderboard"
        style="display:inline-block;background:#18181b;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600">
       Zobacz ranking
     </a>

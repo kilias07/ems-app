@@ -1,27 +1,39 @@
+/**
+ * Structural type matching Cloudflare's `send_email` binding (Email Service public beta).
+ *
+ * Configured in wrangler.jsonc as:
+ *   "send_email": [{ "name": "EMAIL" }]
+ *
+ * Domain must be onboarded to Email Sending in the Cloudflare dashboard
+ * (Email → Email Sending → Onboard Domain) before sends will succeed.
+ */
+export type EmailBinding = {
+  send: (params: {
+    from: string;
+    to: string;
+    subject: string;
+    html: string;
+  }) => Promise<unknown>;
+};
+
 export async function sendEmail({
-  apiKey,
+  binding,
   from,
   to,
   subject,
   html,
 }: {
-  apiKey: string;
+  binding: EmailBinding;
   from: string;
   to: string;
   subject: string;
   html: string;
 }): Promise<void> {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from, to, subject, html }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    console.error(`Resend error ${res.status}: ${text}`);
+  try {
+    await binding.send({ from, to, subject, html });
+  } catch (err) {
+    // Don't throw — email failures shouldn't break the request flow.
+    // Cloudflare logs the underlying error in Workers Logs.
+    console.error(`[email] send failed (to=${to}, subject=${subject}):`, err);
   }
 }

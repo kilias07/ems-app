@@ -56,11 +56,11 @@ export const profileRoutes = t.router({
         getUserById(ctx.userInfo.userId).then((authUser) => {
           if (!authUser?.email) return;
           return sendEmail({
-            apiKey: ctx.env.RESEND_API_KEY,
-            from: ctx.env.RESEND_FROM_EMAIL,
+            binding: ctx.env.EMAIL,
+            from: ctx.env.FROM_EMAIL,
             to: authUser.email,
             subject: "Witaj w EMS Studio!",
-            html: welcomeEmailHtml(input.nickname),
+            html: welcomeEmailHtml(input.nickname, ctx.env.BETTER_AUTH_URL),
           });
         }),
       );

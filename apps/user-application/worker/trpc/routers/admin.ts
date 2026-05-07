@@ -69,11 +69,11 @@ export const adminRoutes = t.router({
           ]);
           if (!authUser?.email) return;
           await sendEmail({
-            apiKey: ctx.env.RESEND_API_KEY,
-            from: ctx.env.RESEND_FROM_EMAIL,
+            binding: ctx.env.EMAIL,
+            from: ctx.env.FROM_EMAIL,
             to: authUser.email,
             subject: "Twoje konto zostało zatwierdzone — EMS Studio",
-            html: accountApprovedEmailHtml(member?.nickname ?? null),
+            html: accountApprovedEmailHtml(member?.nickname ?? null, ctx.env.BETTER_AUTH_URL),
           });
         })(),
       );

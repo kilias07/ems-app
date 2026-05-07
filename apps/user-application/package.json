@@ -9,7 +9,7 @@
     "serve": "vite preview",
     "test": "vitest run",
     "cf-typegen": "wrangler types --env-interface Env",
-    "deploy": "pnpm build && node ../../node_modules/.pnpm/wrangler@4.75.0_@cloudflare+workers-types@4.20260120.0/node_modules/wrangler/bin/wrangler.js deploy --config wrangler.prod.jsonc"
+    "deploy": "pnpm build && pnpm wrangler deploy"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSetupProfileRouteImport } from './routes/app/setup-profile'
 import { Route as AppPendingRouteImport } from './routes/app/pending'
@@ -26,6 +27,11 @@ import { Route as AppAuthedAdminInboxRouteImport } from './routes/app/_authed/ad
 import { Route as AppAuthedAdminImportRouteImport } from './routes/app/_authed/admin/import'
 import { Route as AppAuthedAdminClubPlacesRouteImport } from './routes/app/_authed/admin/club-places'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -111,6 +117,7 @@ const AppAuthedAdminClubPlacesRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/app': typeof AppAuthedRouteWithChildren
   '/app/pending': typeof AppPendingRoute
   '/app/setup-profile': typeof AppSetupProfileRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/app/pending': typeof AppPendingRoute
   '/app/setup-profile': typeof AppSetupProfileRoute
   '/app/leaderboard': typeof AppAuthedLeaderboardRoute
@@ -146,6 +154,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/app/_authed': typeof AppAuthedRouteWithChildren
   '/app/pending': typeof AppPendingRoute
   '/app/setup-profile': typeof AppSetupProfileRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/reset-password'
     | '/app'
     | '/app/pending'
     | '/app/setup-profile'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/reset-password'
     | '/app/pending'
     | '/app/setup-profile'
     | '/app/leaderboard'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/reset-password'
     | '/app/_authed'
     | '/app/pending'
     | '/app/setup-profile'
@@ -219,6 +231,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   AppAuthedRoute: typeof AppAuthedRouteWithChildren
   AppPendingRoute: typeof AppPendingRoute
   AppSetupProfileRoute: typeof AppSetupProfileRoute
@@ -226,6 +239,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -387,6 +407,7 @@ const AppAuthedRouteWithChildren = AppAuthedRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   AppAuthedRoute: AppAuthedRouteWithChildren,
   AppPendingRoute: AppPendingRoute,
   AppSetupProfileRoute: AppSetupProfileRoute,
