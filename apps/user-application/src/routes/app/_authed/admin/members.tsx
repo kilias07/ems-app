@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { trpc } from "@/router";
 import { useMutation, useSuspenseQuery, useQueryClient, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -79,6 +80,47 @@ function MembersPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string | null } | null>(null);
   const [notesTarget, setNotesTarget] = useState<{ id: string; name: string | null } | null>(null);
 
+  // ── Filtering + sorting ──────────────────────────────────────────────────
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved">("all");
+  const [roleFilter, setRoleFilter] = useState<"all" | "user" | "trainer" | "admin">("all");
+  const [clubFilter, setClubFilter] = useState<string>("all");
+  const [sortKey, setSortKey] = useState<"joined-desc" | "joined-asc" | "nick-asc" | "nick-desc">("joined-desc");
+
+  const visibleMembers = useMemo(() => {
+    let rows = [...(members ?? [])];
+
+    const s = search.trim().toLowerCase();
+    if (s) {
+      rows = rows.filter((m) =>
+        (m.nickname ?? "").toLowerCase().includes(s) ||
+        (m.name ?? "").toLowerCase().includes(s) ||
+        (m.email ?? "").toLowerCase().includes(s),
+      );
+    }
+    if (statusFilter !== "all") rows = rows.filter((m) => m.status === statusFilter);
+    if (roleFilter !== "all") rows = rows.filter((m) => m.role === roleFilter);
+    if (clubFilter !== "all") {
+      if (clubFilter === "__none__") rows = rows.filter((m) => !m.clubPlaceId);
+      else if (clubFilter === "home") rows = rows.filter((m) => m.clubPlaceId === "home");
+      else rows = rows.filter((m) => m.clubPlaceId === clubFilter);
+    }
+
+    rows.sort((a, b) => {
+      switch (sortKey) {
+        case "joined-desc":
+          return (b.joinedAt ?? "").localeCompare(a.joinedAt ?? "");
+        case "joined-asc":
+          return (a.joinedAt ?? "").localeCompare(b.joinedAt ?? "");
+        case "nick-asc":
+          return (a.nickname ?? "").localeCompare(b.nickname ?? "", "pl");
+        case "nick-desc":
+          return (b.nickname ?? "").localeCompare(a.nickname ?? "", "pl");
+      }
+    });
+    return rows;
+  }, [members, search, statusFilter, roleFilter, clubFilter, sortKey]);
+
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: trpc.admin.listMembers.queryKey() });
 
@@ -132,6 +174,66 @@ function MembersPage() {
         </p>
       </div>
 
+      {/* Filters + sort */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <Input
+          placeholder="Szukaj po pseudonimie, imieniu, e-mailu…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+          <SelectTrigger className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Status: wszyscy</SelectItem>
+            <SelectItem value="pending">Status: oczekujący</SelectItem>
+            <SelectItem value="approved">Status: zaakceptowani</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as typeof roleFilter)}>
+          <SelectTrigger className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Rola: wszystkie</SelectItem>
+            <SelectItem value="user">Rola: użytkownik</SelectItem>
+            <SelectItem value="trainer">Rola: trener</SelectItem>
+            <SelectItem value="admin">Rola: admin</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={clubFilter} onValueChange={setClubFilter}>
+          <SelectTrigger className="w-52">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Klub: wszystkie</SelectItem>
+            <SelectItem value="__none__">Klub: brak</SelectItem>
+            <SelectItem value="home">Klub: trening w domu</SelectItem>
+            {(clubPlaces ?? []).map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortKey} onValueChange={(v) => setSortKey(v as typeof sortKey)}>
+          <SelectTrigger className="w-52">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="joined-desc">Sortuj: najnowsi</SelectItem>
+            <SelectItem value="joined-asc">Sortuj: najstarsi</SelectItem>
+            <SelectItem value="nick-asc">Sortuj: pseudonim A→Z</SelectItem>
+            <SelectItem value="nick-desc">Sortuj: pseudonim Z→A</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-xs text-muted-foreground ml-auto">
+          {visibleMembers.length} z {(members ?? []).length}
+        </span>
+      </div>
+
       <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
@@ -149,7 +251,13 @@ function MembersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {members.map((member) => (
+            {visibleMembers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={isAdmin ? 10 : 8} className="text-center h-24 text-muted-foreground">
+                  Brak uczestników spełniających kryteria.
+                </TableCell>
+              </TableRow>
+            ) : visibleMembers.map((member) => (
               <TableRow key={member.id}>
                 <TableCell className="font-medium whitespace-nowrap">
                   {member.name ?? (
