@@ -1,4 +1,4 @@
-import { t } from "@/worker/trpc/trpc-instance";
+import { t, userProcedure } from "@/worker/trpc/trpc-instance";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import {
@@ -71,15 +71,9 @@ export const profileRoutes = t.router({
       return { success: true };
     }),
 
-  updateSuitSize: t.procedure
+  updateSuitSize: userProcedure
     .input(z.object({ suitSize: z.enum(["R0", "R1", "RW2", "R2", "R3", "R4", "R5"]) }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.userInfo.nickname) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Najpierw ustaw pseudonim.",
-        });
-      }
       await updateSuitSize(ctx.userInfo.userId, input.suitSize);
       return { success: true };
     }),
@@ -92,7 +86,7 @@ export const profileRoutes = t.router({
     return getRankingCities();
   }),
 
-  updateMyClubPlace: t.procedure
+  updateMyClubPlace: userProcedure
     .input(
       z.object({
         clubPlaceId: z.string().nullable(),
@@ -100,12 +94,6 @@ export const profileRoutes = t.router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.userInfo.nickname) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Najpierw ustaw pseudonim.",
-        });
-      }
       // For home users, city is required and used directly.
       // For real-club users, city is derived from clubPlace at query time, so we store NULL.
       if (input.clubPlaceId === HOME_CLUB_ID) {
@@ -126,17 +114,17 @@ export const profileRoutes = t.router({
     return getNotesForUser(ctx.userInfo.userId);
   }),
 
-  deleteMyAccount: t.procedure.mutation(async ({ ctx }) => {
+  deleteMyAccount: userProcedure.mutation(async ({ ctx }) => {
     await deleteAccount(ctx.userInfo.userId);
     return { success: true };
   }),
 
-  deactivateMyAccount: t.procedure.mutation(async ({ ctx }) => {
+  deactivateMyAccount: userProcedure.mutation(async ({ ctx }) => {
     await setMemberActive(ctx.userInfo.userId, false);
     return { success: true };
   }),
 
-  uploadAvatar: t.procedure
+  uploadAvatar: userProcedure
     .input(
       z.object({
         // Data URL like "data:image/jpeg;base64,..." — frontend resizes to ≤256x256 first.
@@ -180,7 +168,7 @@ export const profileRoutes = t.router({
       return { url };
     }),
 
-  removeMyAvatar: t.procedure.mutation(async ({ ctx }) => {
+  removeMyAvatar: userProcedure.mutation(async ({ ctx }) => {
     await setAvatarUrl(ctx.userInfo.userId, null);
     return { success: true };
   }),

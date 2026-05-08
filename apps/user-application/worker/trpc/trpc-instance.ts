@@ -19,3 +19,14 @@ export const adminProcedure = t.procedure.use(async ({ ctx, next }) => {
   }
   return next({ ctx });
 });
+
+// authenticated user with completed profile (nickname set, profile_complete=1)
+export const userProcedure = t.procedure.use(async ({ ctx, next }) => {
+  if (!ctx.userInfo.profileComplete || !ctx.userInfo.nickname) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Najpierw uzupełnij profil (pseudonim).",
+    });
+  }
+  return next({ ctx });
+});

@@ -8,6 +8,9 @@ export const Route = createFileRoute("/app/pending")({
       const profile = await context.queryClient.fetchQuery(
         context.trpc.profile.getMyProfile.queryOptions(),
       );
+      if (!profile.profileComplete) {
+        throw redirect({ to: "/app/setup-profile" });
+      }
       if (profile.status === "approved") {
         throw redirect({ to: "/app" });
       }

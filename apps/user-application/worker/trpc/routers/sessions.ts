@@ -1,4 +1,4 @@
-import { t } from "@/worker/trpc/trpc-instance";
+import { t, userProcedure } from "@/worker/trpc/trpc-instance";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
@@ -43,7 +43,7 @@ export const sessionsRoutes = t.router({
     return getDayOfWeekDistribution(ctx.userInfo.userId);
   }),
 
-  logMySession: t.procedure
+  logMySession: userProcedure
     .input(
       z.object({
         sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -75,7 +75,7 @@ export const sessionsRoutes = t.router({
       return { correctedPoints };
     }),
 
-  resubmitSession: t.procedure
+  resubmitSession: userProcedure
     .input(z.object({ sessionId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       await resubmitSession(input.sessionId, ctx.userInfo.userId);
