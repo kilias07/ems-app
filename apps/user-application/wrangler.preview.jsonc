@@ -20,11 +20,16 @@
   ],
 
   "vars": {
-    "FROM_EMAIL": "noreply@ems-ranking.pl"
+    "FROM_EMAIL": "noreply@ems-ranking.pl",
+    "AVATAR_PUBLIC_URL": "https://pub-00448ca903c5490f970f5e819fdde287.r2.dev"
   },
 
   "send_email": [
     { "name": "EMAIL" }
+  ],
+
+  "r2_buckets": [
+    { "binding": "AVATARS", "bucket_name": "ems-avatars-preview" }
   ],
 
   "d1_databases": [

@@ -157,6 +157,14 @@ export async function setMemberActive(id: string, active: boolean) {
     .where(eq(memberProfile.id, id));
 }
 
+export async function setAvatarUrl(id: string, avatarUrl: string | null) {
+  const db = getDb();
+  await db
+    .update(memberProfile)
+    .set({ avatarUrl })
+    .where(eq(memberProfile.id, id));
+}
+
 export async function setMemberRole(id: string, role: string) {
   const db = getDb();
   await db

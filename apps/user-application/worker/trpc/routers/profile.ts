@@ -7,6 +7,7 @@ import {
   updateSuitSize,
   deleteAccount,
   setMemberActive,
+  setAvatarUrl,
   assignClubPlaceToUser,
 } from "@repo/data-ops/queries/members";
 import { getAllClubPlaces, getRankingCities } from "@repo/data-ops/queries/club-places";
@@ -132,6 +133,55 @@ export const profileRoutes = t.router({
 
   deactivateMyAccount: t.procedure.mutation(async ({ ctx }) => {
     await setMemberActive(ctx.userInfo.userId, false);
+    return { success: true };
+  }),
+
+  uploadAvatar: t.procedure
+    .input(
+      z.object({
+        // Data URL like "data:image/jpeg;base64,..." — frontend resizes to ≤256x256 first.
+        dataUrl: z.string().startsWith("data:image/").max(500_000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const match = input.dataUrl.match(/^data:(image\/(jpeg|png|webp));base64,(.+)$/);
+      if (!match) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Nieobsługiwany format obrazka. Dozwolone: JPEG, PNG, WEBP.",
+        });
+      }
+      const contentType = match[1];
+      const ext = match[2] === "jpeg" ? "jpg" : match[2];
+      const base64 = match[3];
+
+      // base64 → bytes
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+      if (bytes.byteLength > 350_000) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Obrazek za duży (max 350KB po kompresji).",
+        });
+      }
+
+      // Cache-busting suffix so browsers refresh after re-upload
+      const suffix = Math.random().toString(36).slice(2, 10);
+      const key = `users/${ctx.userInfo.userId}-${suffix}.${ext}`;
+
+      await ctx.env.AVATARS.put(key, bytes, {
+        httpMetadata: { contentType, cacheControl: "public, max-age=31536000, immutable" },
+      });
+
+      const url = `${ctx.env.AVATAR_PUBLIC_URL}/${key}`;
+      await setAvatarUrl(ctx.userInfo.userId, url);
+      return { url };
+    }),
+
+  removeMyAvatar: t.procedure.mutation(async ({ ctx }) => {
+    await setAvatarUrl(ctx.userInfo.userId, null);
     return { success: true };
   }),
 });

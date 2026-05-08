@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { trpc } from "@/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -126,6 +127,10 @@ function SettingsPage() {
           </Badge>
         )}
       </div>
+
+      <Separator />
+
+      <AvatarSection />
 
       <Separator />
 
@@ -284,5 +289,133 @@ function SettingsPage() {
         </Button>
       </section>
     </div>
+  );
+}
+
+async function fileToResizedDataUrl(
+  file: File,
+  maxSize = 256,
+  quality = 0.85,
+): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error("Nie udało się wczytać obrazka."));
+      i.src = url;
+    });
+
+    const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+    const w = Math.round(img.width * scale);
+    const h = Math.round(img.height * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas niedostępny.");
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL("image/jpeg", quality);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function AvatarSection() {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { data: profile } = useQuery(trpc.profile.getMyProfile.queryOptions());
+  const [busy, setBusy] = useState(false);
+
+  const upload = useMutation(
+    trpc.profile.uploadAvatar.mutationOptions({
+      onSuccess: () => {
+        toast.success("Zdjęcie zaktualizowane.");
+        queryClient.invalidateQueries({ queryKey: trpc.profile.getMyProfile.queryKey() });
+      },
+      onError: (err) => toast.error(err.message),
+    }),
+  );
+
+  const remove = useMutation(
+    trpc.profile.removeMyAvatar.mutationOptions({
+      onSuccess: () => {
+        toast.success("Zdjęcie usunięte.");
+        queryClient.invalidateQueries({ queryKey: trpc.profile.getMyProfile.queryKey() });
+      },
+      onError: (err) => toast.error(err.message),
+    }),
+  );
+
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Wybierz plik graficzny (JPEG, PNG lub WEBP).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Plik za duży (max 5MB).");
+      return;
+    }
+    setBusy(true);
+    try {
+      const dataUrl = await fileToResizedDataUrl(file, 256, 0.85);
+      await upload.mutateAsync({ dataUrl });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Nie udało się przetworzyć obrazka.");
+    } finally {
+      setBusy(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const initials = (profile?.nickname ?? "??").slice(0, 2).toUpperCase();
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-base font-semibold">Zdjęcie profilowe</h2>
+        <p className="text-sm text-muted-foreground">
+          Pokazywane przy Twoim pseudonimie w rankingu.
+        </p>
+      </div>
+      <div className="flex items-center gap-4">
+        <Avatar className="size-16">
+          {profile?.avatarUrl && <AvatarImage src={profile.avatarUrl} alt={profile.nickname ?? ""} />}
+          <AvatarFallback className="text-lg">{initials}</AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            variant="outline"
+            disabled={busy || upload.isPending}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {busy || upload.isPending ? "Przesyłanie…" : "Wgraj nowe"}
+          </Button>
+          {profile?.avatarUrl && (
+            <Button
+              variant="ghost"
+              disabled={remove.isPending}
+              onClick={() => remove.mutate()}
+            >
+              {remove.isPending ? "Usuwanie…" : "Usuń"}
+            </Button>
+          )}
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void handleFile(f);
+          }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Plik jest skalowany do 256×256 i kompresowany do JPEG. Akceptowane formaty: JPEG, PNG, WEBP.
+      </p>
+    </section>
   );
 }
