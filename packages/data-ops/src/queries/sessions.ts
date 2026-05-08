@@ -1,6 +1,7 @@
-import { and, eq, gte, lte, sql, desc } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lte, or, sql, desc } from "drizzle-orm";
 import { getDb } from "../db/database";
-import { memberProfile, trainingSession } from "../db/ems-schema";
+import { clubTrainer, memberProfile, trainingSession } from "../db/ems-schema";
+import { HOME_CLUB_ID } from "../utils/suit-multipliers";
 
 export async function getSessionsByMember(
   memberId: string,
@@ -291,6 +292,19 @@ export async function resubmitSession(sessionId: string, memberId: string) {
 
 export async function getPendingSessionsForTrainer(trainerId: string) {
   const db = getDb();
+  const clubIdRows = await db
+    .select({ id: clubTrainer.clubPlaceId })
+    .from(clubTrainer)
+    .where(eq(clubTrainer.trainerId, trainerId));
+  const clubIds = clubIdRows.map((r) => r.id);
+
+  const inClubs = clubIds.length > 0 ? inArray(memberProfile.clubPlaceId, clubIds) : undefined;
+  const openPool = or(
+    isNull(memberProfile.clubPlaceId),
+    eq(memberProfile.clubPlaceId, HOME_CLUB_ID),
+  );
+  const scope = inClubs ? or(inClubs, openPool) : openPool;
+
   const rows = await db
     .select({
       session: trainingSession,
@@ -298,15 +312,20 @@ export async function getPendingSessionsForTrainer(trainerId: string) {
     })
     .from(trainingSession)
     .innerJoin(memberProfile, eq(trainingSession.memberId, memberProfile.id))
-    .where(
-      and(
-        eq(trainingSession.status, "pending"),
-        eq(memberProfile.trainerId, trainerId),
-      ),
-    )
+    .where(and(eq(trainingSession.status, "pending"), scope))
     .orderBy(desc(trainingSession.createdAt));
 
   return rows.map((r) => ({ ...r.session, memberNickname: r.memberNickname }));
+}
+
+export async function getSessionById(sessionId: string) {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(trainingSession)
+    .where(eq(trainingSession.id, sessionId))
+    .limit(1);
+  return rows[0] ?? null;
 }
 
 export async function getAllPendingSessions() {

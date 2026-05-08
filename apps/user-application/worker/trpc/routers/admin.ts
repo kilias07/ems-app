@@ -7,14 +7,15 @@ import { getUserById } from "@repo/data-ops/queries/auth-user";
 const genId = () => crypto.randomUUID();
 import {
   getAllMembers,
+  getMembersForTrainer,
   createMemberProfile,
   setMemberActive,
   setMemberRole,
   getMemberById,
   getMemberByNickname,
   getPendingMembers,
+  getPendingMembersForTrainer,
   approveMember,
-  assignTrainerToUser,
   assignClubPlaceToUser,
   updateSuitSize,
   deleteAccount,
@@ -24,6 +25,7 @@ import {
   insertSessionsBatch,
   deleteSession,
   getSessionsByMember,
+  getSessionById,
   approveSession,
   rejectSession,
   getPendingSessionsForTrainer,
@@ -35,16 +37,38 @@ import {
   updateClubPlace,
   deleteClubPlace,
 } from "@repo/data-ops/queries/club-places";
+import {
+  assignTrainerToClub,
+  unassignTrainerFromClub,
+  getClubsForTrainer,
+  getTrainersForClub,
+} from "@repo/data-ops/queries/club-trainers";
+import { canTrainerAccessUser } from "@repo/data-ops/queries/access-control";
 import { SUIT_MULTIPLIERS } from "@repo/data-ops/utils/suit-multipliers";
 import { getNotesForUser, addNote, deleteNote } from "@repo/data-ops/queries/notes";
 
 const suitSizeSchema = z.enum(["R0", "R1", "RW2", "R2", "R3", "R4", "R5"]);
 
+async function assertTrainerCanAccess(
+  trainerId: string,
+  trainerRole: string,
+  targetUserId: string,
+) {
+  const ok = await canTrainerAccessUser(trainerId, trainerRole, targetUserId);
+  if (!ok) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Ten użytkownik nie należy do żadnego z Twoich klubów.",
+    });
+  }
+}
+
 export const adminRoutes = t.router({
   // ── Members ───────────────────────────────────────────────────────────────
 
-  listMembers: trainerProcedure.query(async () => {
-    return getAllMembers();
+  listMembers: trainerProcedure.query(async ({ ctx }) => {
+    if (ctx.userInfo.role === "admin") return getAllMembers();
+    return getMembersForTrainer(ctx.userInfo.userId);
   }),
 
   listTrainers: trainerProcedure.query(async () => {
@@ -52,13 +76,15 @@ export const adminRoutes = t.router({
     return all.filter((m) => m.role === "trainer" || m.role === "admin");
   }),
 
-  getPendingMembers: trainerProcedure.query(async () => {
-    return getPendingMembers();
+  getPendingMembers: trainerProcedure.query(async ({ ctx }) => {
+    if (ctx.userInfo.role === "admin") return getPendingMembers();
+    return getPendingMembersForTrainer(ctx.userInfo.userId);
   }),
 
   approveMember: trainerProcedure
     .input(z.object({ memberId: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      await assertTrainerCanAccess(ctx.userInfo.userId, ctx.userInfo.role, input.memberId);
       await approveMember(input.memberId);
 
       ctx.workerCtx.waitUntil(
@@ -81,11 +107,42 @@ export const adminRoutes = t.router({
       return { success: true };
     }),
 
-  assignTrainer: trainerProcedure
-    .input(z.object({ userId: z.string(), trainerId: z.string().nullable() }))
+  // ── Trainer ↔ club assignments (admin-only) ───────────────────────────────
+
+  assignTrainerToClub: adminProcedure
+    .input(z.object({ trainerId: z.string(), clubPlaceId: z.string() }))
     .mutation(async ({ input }) => {
-      await assignTrainerToUser(input.userId, input.trainerId);
+      const target = await getMemberById(input.trainerId);
+      if (!target) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Użytkownik nie istnieje." });
+      }
+      if (target.role !== "trainer" && target.role !== "admin") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Tylko trener lub admin może być przypisany do klubu.",
+        });
+      }
+      await assignTrainerToClub(input.trainerId, input.clubPlaceId);
       return { success: true };
+    }),
+
+  unassignTrainerFromClub: adminProcedure
+    .input(z.object({ trainerId: z.string(), clubPlaceId: z.string() }))
+    .mutation(async ({ input }) => {
+      await unassignTrainerFromClub(input.trainerId, input.clubPlaceId);
+      return { success: true };
+    }),
+
+  getClubsForTrainer: trainerProcedure
+    .input(z.object({ trainerId: z.string() }))
+    .query(async ({ input }) => {
+      return getClubsForTrainer(input.trainerId);
+    }),
+
+  getTrainersForClub: trainerProcedure
+    .input(z.object({ clubPlaceId: z.string() }))
+    .query(async ({ input }) => {
+      return getTrainersForClub(input.clubPlaceId);
     }),
 
   assignClubPlace: trainerProcedure
@@ -96,7 +153,8 @@ export const adminRoutes = t.router({
         city: z.string().nullable().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await assertTrainerCanAccess(ctx.userInfo.userId, ctx.userInfo.role, input.userId);
       const city =
         input.clubPlaceId === "home" && input.city ? input.city.trim() : null;
       await assignClubPlaceToUser(input.userId, input.clubPlaceId, city);
@@ -105,7 +163,8 @@ export const adminRoutes = t.router({
 
   updateMemberSuitSize: trainerProcedure
     .input(z.object({ memberId: z.string(), suitSize: suitSizeSchema }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await assertTrainerCanAccess(ctx.userInfo.userId, ctx.userInfo.role, input.memberId);
       await updateSuitSize(input.memberId, input.suitSize);
       return { success: true };
     }),
@@ -124,7 +183,8 @@ export const adminRoutes = t.router({
 
   setMemberActive: trainerProcedure
     .input(z.object({ memberId: z.string(), active: z.boolean() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await assertTrainerCanAccess(ctx.userInfo.userId, ctx.userInfo.role, input.memberId);
       await setMemberActive(input.memberId, input.active);
       return { success: true };
     }),
@@ -141,6 +201,7 @@ export const adminRoutes = t.router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await assertTrainerCanAccess(ctx.userInfo.userId, ctx.userInfo.role, input.memberId);
       const member = await getMemberById(input.memberId);
       if (!member?.suitSize) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Uczestnik nie ma ustawionego rozmiaru kombinezonu." });
@@ -165,14 +226,20 @@ export const adminRoutes = t.router({
 
   deleteSession: trainerProcedure
     .input(z.object({ sessionId: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const session = await getSessionById(input.sessionId);
+      if (!session) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Sesja nie istnieje." });
+      }
+      await assertTrainerCanAccess(ctx.userInfo.userId, ctx.userInfo.role, session.memberId);
       await deleteSession(input.sessionId);
       return { success: true };
     }),
 
   getMemberSessions: trainerProcedure
     .input(z.object({ memberId: z.string(), page: z.number().min(1).default(1) }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertTrainerCanAccess(ctx.userInfo.userId, ctx.userInfo.role, input.memberId);
       return getSessionsByMember(input.memberId, { page: input.page });
     }),
 
@@ -194,6 +261,11 @@ export const adminRoutes = t.router({
     )
     .mutation(async ({ ctx, input }) => {
       const { sessionId, ...edits } = input;
+      const session = await getSessionById(sessionId);
+      if (!session) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Sesja nie istnieje." });
+      }
+      await assertTrainerCanAccess(ctx.userInfo.userId, ctx.userInfo.role, session.memberId);
       await approveSession(sessionId, ctx.userInfo.userId, edits);
       return { success: true };
     }),
@@ -201,6 +273,11 @@ export const adminRoutes = t.router({
   rejectSession: trainerProcedure
     .input(z.object({ sessionId: z.string(), rejectionNote: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      const session = await getSessionById(input.sessionId);
+      if (!session) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Sesja nie istnieje." });
+      }
+      await assertTrainerCanAccess(ctx.userInfo.userId, ctx.userInfo.role, session.memberId);
       await rejectSession(input.sessionId, ctx.userInfo.userId, input.rejectionNote);
       return { success: true };
     }),
@@ -279,13 +356,15 @@ export const adminRoutes = t.router({
 
   getNotesForUser: trainerProcedure
     .input(z.object({ userId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await assertTrainerCanAccess(ctx.userInfo.userId, ctx.userInfo.role, input.userId);
       return getNotesForUser(input.userId);
     }),
 
   addNote: trainerProcedure
     .input(z.object({ userId: z.string(), content: z.string().min(1).max(2000) }))
     .mutation(async ({ ctx, input }) => {
+      await assertTrainerCanAccess(ctx.userInfo.userId, ctx.userInfo.role, input.userId);
       await addNote(genId(), input.userId, ctx.userInfo.userId, input.content);
       return { success: true };
     }),
@@ -293,6 +372,7 @@ export const adminRoutes = t.router({
   deleteNote: trainerProcedure
     .input(z.object({ noteId: z.string() }))
     .mutation(async ({ input }) => {
+      // Note delete is rare and notes are scoped to trainer access already via list query.
       await deleteNote(input.noteId);
       return { success: true };
     }),

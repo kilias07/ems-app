@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, primaryKey } from "drizzle-orm/sqlite-core";
 
 export const clubPlace = sqliteTable("club_place", {
   id: text("id").primaryKey(),
@@ -22,13 +22,28 @@ export const memberProfile = sqliteTable("member_profile", {
   profileComplete: integer("profile_complete").notNull().default(0),
   suitSize: text("suit_size"),
   avatarUrl: text("avatar_url"),
-  trainerId: text("trainer_id"), // FK to member_profile (linked trainer)
   clubPlaceId: text("club_place_id"), // FK to club_place
   city: text("city"), // ranking city (set when clubPlaceId === HOME_CLUB_ID; otherwise derived from club)
   joinedAt: text("joined_at")
     .notNull()
     .default(sql`(datetime('now'))`),
 });
+
+export const clubTrainer = sqliteTable(
+  "club_trainer",
+  {
+    clubPlaceId: text("club_place_id")
+      .notNull()
+      .references(() => clubPlace.id, { onDelete: "cascade" }),
+    trainerId: text("trainer_id")
+      .notNull()
+      .references(() => memberProfile.id, { onDelete: "cascade" }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (t) => [primaryKey({ columns: [t.clubPlaceId, t.trainerId] })],
+);
 
 export const userNote = sqliteTable("user_note", {
   id: text("id").primaryKey(),

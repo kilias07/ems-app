@@ -1,7 +1,8 @@
-import { eq, isNull, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { getDb } from "../db/database";
-import { memberProfile } from "../db/ems-schema";
+import { clubTrainer, memberProfile } from "../db/ems-schema";
 import { user as authUser } from "../drizzle-out/auth-schema";
+import { HOME_CLUB_ID } from "../utils/suit-multipliers";
 
 export async function deleteAccount(id: string) {
   const db = getDb();
@@ -30,53 +31,89 @@ export async function getMemberByNickname(nickname: string) {
   return rows[0] ?? null;
 }
 
+const memberSelect = {
+  id: memberProfile.id,
+  nickname: memberProfile.nickname,
+  role: memberProfile.role,
+  status: memberProfile.status,
+  isActive: memberProfile.isActive,
+  profileComplete: memberProfile.profileComplete,
+  suitSize: memberProfile.suitSize,
+  avatarUrl: memberProfile.avatarUrl,
+  clubPlaceId: memberProfile.clubPlaceId,
+  joinedAt: memberProfile.joinedAt,
+  email: authUser.email,
+  name: authUser.name,
+};
+
 export async function getAllMembers() {
   const db = getDb();
-  const rows = await db
-    .select({
-      id: memberProfile.id,
-      nickname: memberProfile.nickname,
-      role: memberProfile.role,
-      status: memberProfile.status,
-      isActive: memberProfile.isActive,
-      profileComplete: memberProfile.profileComplete,
-      suitSize: memberProfile.suitSize,
-      avatarUrl: memberProfile.avatarUrl,
-      trainerId: memberProfile.trainerId,
-      clubPlaceId: memberProfile.clubPlaceId,
-      joinedAt: memberProfile.joinedAt,
-      email: authUser.email,
-      name: authUser.name,
-    })
+  return db
+    .select(memberSelect)
     .from(memberProfile)
     .leftJoin(authUser, eq(memberProfile.id, authUser.id))
     .orderBy(memberProfile.nickname);
-  return rows;
 }
 
 export async function getPendingMembers() {
   const db = getDb();
-  const rows = await db
-    .select({
-      id: memberProfile.id,
-      nickname: memberProfile.nickname,
-      role: memberProfile.role,
-      status: memberProfile.status,
-      isActive: memberProfile.isActive,
-      profileComplete: memberProfile.profileComplete,
-      suitSize: memberProfile.suitSize,
-      avatarUrl: memberProfile.avatarUrl,
-      trainerId: memberProfile.trainerId,
-      clubPlaceId: memberProfile.clubPlaceId,
-      joinedAt: memberProfile.joinedAt,
-      email: authUser.email,
-      name: authUser.name,
-    })
+  return db
+    .select(memberSelect)
     .from(memberProfile)
     .leftJoin(authUser, eq(memberProfile.id, authUser.id))
     .where(eq(memberProfile.status, "pending"))
     .orderBy(memberProfile.joinedAt);
-  return rows;
+}
+
+/**
+ * Members that a trainer is allowed to manage:
+ * - users in any of the trainer's assigned clubs
+ * - users in the open pool: clubPlaceId = 'home' OR clubPlaceId IS NULL
+ */
+export async function getMembersForTrainer(trainerId: string) {
+  const db = getDb();
+  const clubIdRows = await db
+    .select({ id: clubTrainer.clubPlaceId })
+    .from(clubTrainer)
+    .where(eq(clubTrainer.trainerId, trainerId));
+  const clubIds = clubIdRows.map((r) => r.id);
+
+  const inClubs = clubIds.length > 0 ? inArray(memberProfile.clubPlaceId, clubIds) : undefined;
+  const openPool = or(
+    isNull(memberProfile.clubPlaceId),
+    eq(memberProfile.clubPlaceId, HOME_CLUB_ID),
+  );
+  const scope = inClubs ? or(inClubs, openPool) : openPool;
+
+  return db
+    .select(memberSelect)
+    .from(memberProfile)
+    .leftJoin(authUser, eq(memberProfile.id, authUser.id))
+    .where(scope)
+    .orderBy(memberProfile.nickname);
+}
+
+export async function getPendingMembersForTrainer(trainerId: string) {
+  const db = getDb();
+  const clubIdRows = await db
+    .select({ id: clubTrainer.clubPlaceId })
+    .from(clubTrainer)
+    .where(eq(clubTrainer.trainerId, trainerId));
+  const clubIds = clubIdRows.map((r) => r.id);
+
+  const inClubs = clubIds.length > 0 ? inArray(memberProfile.clubPlaceId, clubIds) : undefined;
+  const openPool = or(
+    isNull(memberProfile.clubPlaceId),
+    eq(memberProfile.clubPlaceId, HOME_CLUB_ID),
+  );
+  const scope = inClubs ? or(inClubs, openPool) : openPool;
+
+  return db
+    .select(memberSelect)
+    .from(memberProfile)
+    .leftJoin(authUser, eq(memberProfile.id, authUser.id))
+    .where(and(eq(memberProfile.status, "pending"), scope))
+    .orderBy(memberProfile.joinedAt);
 }
 
 export async function createMemberProfile(data: {
@@ -136,14 +173,6 @@ export async function approveMember(id: string) {
     .where(eq(memberProfile.id, id));
 }
 
-export async function assignTrainerToUser(userId: string, trainerId: string | null) {
-  const db = getDb();
-  await db
-    .update(memberProfile)
-    .set({ trainerId })
-    .where(eq(memberProfile.id, userId));
-}
-
 export async function assignClubPlaceToUser(
   userId: string,
   clubPlaceId: string | null,
@@ -156,16 +185,3 @@ export async function assignClubPlaceToUser(
     .where(eq(memberProfile.id, userId));
 }
 
-export async function getUnassignedOrMyUsers(trainerId: string) {
-  const db = getDb();
-  return db
-    .select()
-    .from(memberProfile)
-    .where(
-      or(
-        eq(memberProfile.trainerId, trainerId),
-        isNull(memberProfile.trainerId),
-      ),
-    )
-    .orderBy(memberProfile.nickname);
-}

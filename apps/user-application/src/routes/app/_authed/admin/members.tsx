@@ -49,9 +49,6 @@ export const Route = createFileRoute("/app/_authed/admin/members")({
         context.trpc.admin.listMembers.queryOptions(),
       ),
       context.queryClient.prefetchQuery(
-        context.trpc.admin.listTrainers.queryOptions(),
-      ),
-      context.queryClient.prefetchQuery(
         context.trpc.admin.listClubPlaces.queryOptions(),
       ),
     ]);
@@ -75,7 +72,6 @@ function MembersPage() {
   const queryClient = useQueryClient();
   const { data: members } = useSuspenseQuery(trpc.admin.listMembers.queryOptions());
   const { data: myProfile } = useQuery(trpc.profile.getMyProfile.queryOptions());
-  const { data: trainers } = useQuery(trpc.admin.listTrainers.queryOptions());
   const { data: clubPlaces } = useQuery(trpc.admin.listClubPlaces.queryOptions());
 
   const isAdmin = myProfile?.role === "admin";
@@ -85,12 +81,6 @@ function MembersPage() {
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: trpc.admin.listMembers.queryKey() });
-
-  const invalidateInbox = () =>
-    Promise.all([
-      queryClient.invalidateQueries({ queryKey: trpc.admin.getPendingSessions.queryKey() }),
-      queryClient.invalidateQueries({ queryKey: trpc.admin.getPendingMembers.queryKey() }),
-    ]);
 
   const setActive = useMutation(
     trpc.admin.setMemberActive.mutationOptions({
@@ -113,12 +103,7 @@ function MembersPage() {
     }),
   );
 
-  const assignTrainer = useMutation(
-    trpc.admin.assignTrainer.mutationOptions({
-      onSuccess: () => { invalidate(); invalidateInbox(); },
-      onError: (err) => toast.error(err.message),
-    }),
-  );
+  const [clubsTarget, setClubsTarget] = useState<{ id: string; name: string | null } | null>(null);
 
   const assignClubPlace = useMutation(
     trpc.admin.assignClubPlace.mutationOptions({
@@ -156,7 +141,7 @@ function MembersPage() {
               <TableHead>Pseudonim</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Rola</TableHead>
-              <TableHead>Trener</TableHead>
+              {isAdmin && <TableHead>Kluby trenera</TableHead>}
               <TableHead>Miejsce</TableHead>
               <TableHead className="text-right">Aktywny</TableHead>
               <TableHead />
@@ -223,33 +208,22 @@ function MembersPage() {
                     </Badge>
                   )}
                 </TableCell>
-                <TableCell>
-                  {member.role === "user" ? (
-                    <Select
-                      value={member.trainerId ?? "__none__"}
-                      onValueChange={(val) =>
-                        assignTrainer.mutate({
-                          userId: member.id,
-                          trainerId: val === "__none__" ? null : val,
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-7 w-36 text-xs">
-                        <SelectValue placeholder="Brak" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Brak</SelectItem>
-                        {(trainers ?? []).map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.nickname ?? t.name ?? t.id.slice(0, 8)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  )}
-                </TableCell>
+                {isAdmin && (
+                  <TableCell>
+                    {member.role === "trainer" || member.role === "admin" ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setClubsTarget({ id: member.id, name: member.nickname ?? member.name })}
+                      >
+                        Zarządzaj
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell>
                   <Select
                     value={member.clubPlaceId ?? "__none__"}
@@ -312,6 +286,12 @@ function MembersPage() {
         userId={notesTarget?.id ?? null}
         userName={notesTarget?.name ?? null}
         onClose={() => setNotesTarget(null)}
+      />
+
+      <TrainerClubsSheet
+        trainerId={clubsTarget?.id ?? null}
+        trainerName={clubsTarget?.name ?? null}
+        onClose={() => setClubsTarget(null)}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
@@ -426,6 +406,83 @@ function NotesSheet({
                 </div>
               </div>
             ))
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function TrainerClubsSheet({
+  trainerId,
+  trainerName,
+  onClose,
+}: {
+  trainerId: string | null;
+  trainerName: string | null;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const { data: allClubs } = useQuery(trpc.admin.listClubPlaces.queryOptions());
+  const { data: assignedClubs } = useQuery({
+    ...trpc.admin.getClubsForTrainer.queryOptions({ trainerId: trainerId ?? "" }),
+    enabled: !!trainerId,
+  });
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({
+      queryKey: trpc.admin.getClubsForTrainer.queryKey({ trainerId: trainerId ?? "" }),
+    });
+
+  const assign = useMutation(
+    trpc.admin.assignTrainerToClub.mutationOptions({
+      onSuccess: invalidate,
+      onError: (err) => toast.error(err.message),
+    }),
+  );
+
+  const unassign = useMutation(
+    trpc.admin.unassignTrainerFromClub.mutationOptions({
+      onSuccess: invalidate,
+      onError: (err) => toast.error(err.message),
+    }),
+  );
+
+  const assignedIds = new Set((assignedClubs ?? []).map((c) => c.id));
+
+  return (
+    <Sheet open={!!trainerId} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>Kluby trenera{trainerName ? ` — ${trainerName}` : ""}</SheetTitle>
+        </SheetHeader>
+        <div className="px-4 pb-6 space-y-2">
+          {(allClubs ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">Brak klubów. Dodaj kluby w sekcji Miejsca.</p>
+          ) : (
+            (allClubs ?? []).map((club) => {
+              const isAssigned = assignedIds.has(club.id);
+              return (
+                <div key={club.id} className="flex items-center justify-between rounded-md border p-3">
+                  <div>
+                    <p className="font-medium">{club.name}</p>
+                    <p className="text-xs text-muted-foreground">{club.city}</p>
+                  </div>
+                  <Switch
+                    checked={isAssigned}
+                    disabled={!trainerId || assign.isPending || unassign.isPending}
+                    onCheckedChange={(checked) => {
+                      if (!trainerId) return;
+                      if (checked) {
+                        assign.mutate({ trainerId, clubPlaceId: club.id });
+                      } else {
+                        unassign.mutate({ trainerId, clubPlaceId: club.id });
+                      }
+                    }}
+                  />
+                </div>
+              );
+            })
           )}
         </div>
       </SheetContent>
