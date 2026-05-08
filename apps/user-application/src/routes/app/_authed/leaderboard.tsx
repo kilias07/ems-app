@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { trpc } from "@/router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function getCurrentMonthKey() {
   const d = new Date();
@@ -135,6 +136,59 @@ function LeaderboardTable({
   );
 }
 
+function LeaderboardTableSkeleton({ scope }: { scope: Scope }) {
+  const showClub = scope === "city";
+  const showCity = scope === "country";
+
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-16">Miejsce</TableHead>
+            <TableHead>Uczestnik</TableHead>
+            {showClub && <TableHead>Klub</TableHead>}
+            {showCity && <TableHead>Miasto</TableHead>}
+            <TableHead className="text-right">Sesje</TableHead>
+            <TableHead className="text-right">Łączne punkty</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <TableRow key={i}>
+              <TableCell>
+                <Skeleton className="h-5 w-6 mx-auto" />
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="size-8 rounded-full" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </TableCell>
+              {showClub && (
+                <TableCell>
+                  <Skeleton className="h-4 w-24" />
+                </TableCell>
+              )}
+              {showCity && (
+                <TableCell>
+                  <Skeleton className="h-4 w-24" />
+                </TableCell>
+              )}
+              <TableCell className="text-right">
+                <Skeleton className="h-4 w-8 ml-auto" />
+              </TableCell>
+              <TableCell className="text-right">
+                <Skeleton className="h-4 w-16 ml-auto" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/app/_authed/leaderboard")({
   loader: async ({ context }) => {
     const monthKey = getCurrentMonthKey();
@@ -162,6 +216,9 @@ export const Route = createFileRoute("/app/_authed/leaderboard")({
       ),
       context.queryClient.prefetchQuery(
         context.trpc.profile.getMyProfile.queryOptions(),
+      ),
+      context.queryClient.prefetchQuery(
+        context.trpc.leaderboard.getMyClubInfo.queryOptions(),
       ),
     ]);
   },
@@ -237,12 +294,14 @@ function LeaderboardPage() {
           Nie jesteś przypisany do żadnego klubu. Skontaktuj się z trenerem.
         </div>
       ) : (
-        <LeaderboardTable
-          period={period}
-          periodKey={periodKey}
-          scope={scope}
-          scopeKey={scopeKey}
-        />
+        <Suspense fallback={<LeaderboardTableSkeleton scope={scope} />}>
+          <LeaderboardTable
+            period={period}
+            periodKey={periodKey}
+            scope={scope}
+            scopeKey={scopeKey}
+          />
+        </Suspense>
       )}
     </div>
   );
