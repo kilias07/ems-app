@@ -18,6 +18,7 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { trpc } from "@/router";
@@ -26,6 +27,12 @@ import { useQuery } from "@tanstack/react-query";
 export function NavMain() {
   const nav = useNavigate();
   const { location } = useRouterState();
+  const { setOpenMobile } = useSidebar();
+
+  const handleSelect = (to: string) => {
+    nav({ to });
+    setOpenMobile(false);
+  };
 
   const { data: profile } = useQuery(trpc.profile.getMyProfile.queryOptions());
   const { data: pendingMembers } = useQuery({
@@ -69,7 +76,7 @@ export function NavMain() {
             {memberItems.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
-                  onClick={() => nav({ to: item.to })}
+                  onClick={() => handleSelect(item.to)}
                   tooltip={item.title}
                   isActive={isActive(item.to)}
                 >
@@ -90,7 +97,7 @@ export function NavMain() {
               {trainerItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    onClick={() => nav({ to: item.to })}
+                    onClick={() => handleSelect(item.to)}
                     tooltip={item.title}
                     isActive={isActive(item.to)}
                   >
