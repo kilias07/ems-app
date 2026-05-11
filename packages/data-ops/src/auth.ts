@@ -2,9 +2,8 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { getDb } from "./db/database";
 import { account, session, user, verification } from "./drizzle-out/auth-schema";
-import { createMemberProfile } from "./queries/members";
 
-const ADMIN_EMAILS = ["kamilkiliasinski@gmail.com", "ad@emspro.pl"];
+export const ADMIN_EMAILS = ["kamilkiliasinski@gmail.com", "ad@emspro.pl"];
 
 /**
  * Structural type matching Cloudflare's `send_email` binding (Email Service public beta).
@@ -118,21 +117,6 @@ export function createBetterAuth(
       accountLinking: {
         enabled: true,
         trustedProviders: ["google"],
-      },
-    },
-    databaseHooks: {
-      user: {
-        create: {
-          after: async (newUser) => {
-            const isAdmin = ADMIN_EMAILS.includes(newUser.email);
-            await createMemberProfile({
-              id: newUser.id,
-              avatarUrl: newUser.image ?? null,
-              role: isAdmin ? "admin" : "user",
-              status: isAdmin ? "approved" : "pending",
-            });
-          },
-        },
       },
     },
   });

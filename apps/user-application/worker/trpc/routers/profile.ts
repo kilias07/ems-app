@@ -2,7 +2,7 @@ import { t, userProcedure } from "@/worker/trpc/trpc-instance";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import {
-  updateNickname,
+  setupProfileWithNickname,
   getMemberByNickname,
   updateSuitSize,
   deleteAccount,
@@ -14,6 +14,7 @@ import { getAllClubPlaces, getRankingCities } from "@repo/data-ops/queries/club-
 import { HOME_CLUB_ID } from "@repo/data-ops/utils/suit-multipliers";
 import { getNotesForUser } from "@repo/data-ops/queries/notes";
 import { getUserById } from "@repo/data-ops/queries/auth-user";
+import { ADMIN_EMAILS } from "@repo/data-ops/auth";
 import { sendEmail } from "@/worker/lib/email";
 import { welcomeEmailHtml } from "@/worker/lib/email-templates";
 
@@ -46,6 +47,10 @@ export const profileRoutes = t.router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const authUser = await getUserById(ctx.userInfo.userId);
+      if (!authUser?.email) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
       const existing = await getMemberByNickname(input.nickname);
       if (existing && existing.id !== ctx.userInfo.userId) {
         throw new TRPCError({
@@ -53,18 +58,20 @@ export const profileRoutes = t.router({
           message: "Nickname already taken",
         });
       }
-      await updateNickname(ctx.userInfo.userId, input.nickname);
+      const isAdmin = ADMIN_EMAILS.includes(authUser.email);
+      await setupProfileWithNickname(ctx.userInfo.userId, input.nickname, {
+        role: isAdmin ? "admin" : "user",
+        status: isAdmin ? "approved" : "pending",
+        avatarUrl: authUser.image ?? null,
+      });
 
       ctx.workerCtx.waitUntil(
-        getUserById(ctx.userInfo.userId).then((authUser) => {
-          if (!authUser?.email) return;
-          return sendEmail({
-            binding: ctx.env.EMAIL,
-            from: ctx.env.FROM_EMAIL,
-            to: authUser.email,
-            subject: "Witaj w EMS Studio!",
-            html: welcomeEmailHtml(input.nickname, ctx.env.BETTER_AUTH_URL),
-          });
+        sendEmail({
+          binding: ctx.env.EMAIL,
+          from: ctx.env.FROM_EMAIL,
+          to: authUser.email,
+          subject: "Witaj w EMS Studio!",
+          html: welcomeEmailHtml(input.nickname, ctx.env.BETTER_AUTH_URL),
         }),
       );
 

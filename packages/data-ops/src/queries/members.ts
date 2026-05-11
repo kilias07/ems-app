@@ -118,7 +118,7 @@ export async function getPendingMembersForTrainer(trainerId: string) {
 
 export async function createMemberProfile(data: {
   id: string;
-  nickname?: string | null;
+  nickname: string;
   role?: string;
   status?: string;
   avatarUrl?: string | null;
@@ -126,11 +126,34 @@ export async function createMemberProfile(data: {
   const db = getDb();
   await db.insert(memberProfile).values({
     id: data.id,
-    nickname: data.nickname ?? null,
+    nickname: data.nickname,
     role: data.role ?? "user",
     status: data.status ?? "pending",
     avatarUrl: data.avatarUrl ?? null,
+    profileComplete: 1,
   });
+}
+
+export async function setupProfileWithNickname(
+  id: string,
+  nickname: string,
+  opts: { role: string; status: string; avatarUrl: string | null },
+) {
+  const db = getDb();
+  await db
+    .insert(memberProfile)
+    .values({
+      id,
+      nickname,
+      role: opts.role,
+      status: opts.status,
+      avatarUrl: opts.avatarUrl,
+      profileComplete: 1,
+    })
+    .onConflictDoUpdate({
+      target: memberProfile.id,
+      set: { nickname, profileComplete: 1 },
+    });
 }
 
 export async function updateNickname(id: string, nickname: string) {

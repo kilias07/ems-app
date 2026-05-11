@@ -15,7 +15,7 @@ export const clubPlace = sqliteTable("club_place", {
 
 export const memberProfile = sqliteTable("member_profile", {
   id: text("id").primaryKey(),
-  nickname: text("nickname").unique(),
+  nickname: text("nickname").notNull().unique(),
   role: text("role").notNull().default("user"),
   status: text("status").notNull().default("pending"), // 'pending' | 'approved'
   isActive: integer("is_active").notNull().default(1),
