@@ -2,6 +2,7 @@ import { and, eq, gte, inArray, isNull, lte, or, sql, desc } from "drizzle-orm";
 import { getDb } from "../db/database";
 import { clubTrainer, memberProfile, trainingSession } from "../db/ems-schema";
 import { HOME_CLUB_ID } from "../utils/suit-multipliers";
+import { fmtDate, mondayOf } from "../utils/date-range";
 
 export async function getSessionsByMember(
   memberId: string,
@@ -40,11 +41,10 @@ export async function getMemberStats(memberId: string) {
   const db = getDb();
 
   const today = new Date();
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - today.getDay() + 1);
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const weekStart = mondayOf(today);
+  const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
 
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const fmt = fmtDate;
 
   const approvedOnly = eq(trainingSession.status, "approved");
 
@@ -93,6 +93,44 @@ export async function getMemberStats(memberId: string) {
     weekPoints: weekly[0]?.points ?? 0,
     monthSessions: monthly[0]?.count ?? 0,
     monthPoints: monthly[0]?.points ?? 0,
+  };
+}
+
+export async function getMemberWeekRangeStats(
+  memberId: string,
+  start: string,
+  end: string,
+) {
+  const db = getDb();
+  const approvedOnly = eq(trainingSession.status, "approved");
+
+  const [weekly, totals] = await Promise.all([
+    db
+      .select({
+        count: sql<number>`count(*)`,
+        points: sql<number>`coalesce(sum(${trainingSession.correctedPoints}), 0)`,
+      })
+      .from(trainingSession)
+      .where(
+        and(
+          eq(trainingSession.memberId, memberId),
+          approvedOnly,
+          gte(trainingSession.sessionDate, start),
+          lte(trainingSession.sessionDate, end),
+        ),
+      ),
+    db
+      .select({
+        totalPoints: sql<number>`coalesce(sum(${trainingSession.correctedPoints}), 0)`,
+      })
+      .from(trainingSession)
+      .where(and(eq(trainingSession.memberId, memberId), approvedOnly)),
+  ]);
+
+  return {
+    weekSessions: weekly[0]?.count ?? 0,
+    weekPoints: weekly[0]?.points ?? 0,
+    totalPoints: totals[0]?.totalPoints ?? 0,
   };
 }
 

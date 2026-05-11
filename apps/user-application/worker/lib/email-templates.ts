@@ -62,6 +62,8 @@ export function accountApprovedEmailHtml(nickname: string | null, baseUrl: strin
 export function weeklySummaryEmailHtml(
   nickname: string,
   stats: {
+    weekStart: string;
+    weekEnd: string;
     weekSessions: number;
     weekPoints: number;
     totalPoints: number;
@@ -72,22 +74,37 @@ export function weeklySummaryEmailHtml(
   const rankText =
     stats.rank != null ? `#${stats.rank} w rankingu ogólnym` : "jeszcze bez rankingu";
 
+  const dayMonthFmt = new Intl.DateTimeFormat("pl-PL", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  });
+  const fullFmt = new Intl.DateTimeFormat("pl-PL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  const startDate = new Date(`${stats.weekStart}T00:00:00Z`);
+  const endDate = new Date(`${stats.weekEnd}T00:00:00Z`);
+  const rangeLabel = `${dayMonthFmt.format(startDate)} – ${fullFmt.format(endDate)}`;
+
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="font-family:sans-serif;background:#f9fafb;margin:0;padding:40px 20px">
   <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
     <h1 style="margin:0 0 4px;font-size:22px;color:#111">Podsumowanie tygodnia, ${nickname}</h1>
-    <p style="color:#888;margin:0 0 28px;font-size:13px">Tydzień kończący się ${new Date().toLocaleDateString("pl-PL")}</p>
+    <p style="color:#888;margin:0 0 28px;font-size:13px">${rangeLabel}</p>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">
       <div style="background:#f4f4f5;border-radius:8px;padding:16px">
         <div style="font-size:28px;font-weight:700;color:#111">${stats.weekSessions}</div>
-        <div style="color:#666;font-size:13px;margin-top:4px">sesje w tym tygodniu</div>
+        <div style="color:#666;font-size:13px;margin-top:4px">sesje w minionym tygodniu</div>
       </div>
       <div style="background:#f4f4f5;border-radius:8px;padding:16px">
         <div style="font-size:28px;font-weight:700;color:#111">${Math.round(stats.weekPoints)}</div>
-        <div style="color:#666;font-size:13px;margin-top:4px">punkty w tym tygodniu</div>
+        <div style="color:#666;font-size:13px;margin-top:4px">punkty w minionym tygodniu</div>
       </div>
       <div style="background:#f4f4f5;border-radius:8px;padding:16px">
         <div style="font-size:28px;font-weight:700;color:#111">${Math.round(stats.totalPoints)}</div>
