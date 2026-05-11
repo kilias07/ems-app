@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/common/app-sidebar";
+import { MobileThemeColorSync } from "@/components/common/mobile-theme-color-sync";
 import { SiteHeader } from "@/components/common/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import {
@@ -41,6 +42,7 @@ function RouteComponent() {
           } as React.CSSProperties
         }
       >
+        <MobileThemeColorSync />
         <AppSidebar variant="inset" />
         <SidebarInset className="flex flex-col w-full">
           <SiteHeader />
