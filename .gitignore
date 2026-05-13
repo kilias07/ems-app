@@ -82,6 +82,9 @@ temp/
 # Wrangler cache
 .wrangler/
 
+# Local D1 dumps (may contain PII — never commit)
+backups/
+
 # Editor directories and files
 .vscode/
 .dev.vars

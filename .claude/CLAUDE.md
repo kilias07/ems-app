@@ -114,3 +114,18 @@ appRouter
 2. Use `/app/admin/import` to paste spreadsheet CSV and map nicks to members
 3. Confirm bulk insert
 4. Verify leaderboard totals match the spreadsheet
+
+## Backup & Recovery
+Production runs on Cloudflare D1 **Time Travel** (point-in-time restore, 30-day retention on Workers Paid, 7-day on Free). It is on by default — D1 keeps bookmarks automatically.
+
+Manual commands (run from repo root):
+- `pnpm db:backup` — exports the remote DB to `backups/<timestamp>.sql` (gitignored, may contain PII)
+- `pnpm db:tt-info` — prints the current bookmark and retention window
+- `pnpm db:tt-restore --timestamp 2026-05-13T08:00:00Z` — in-place restore (DESTRUCTIVE)
+- `pnpm db:tt-restore --bookmark 0000xxxx-...` — restore to a specific bookmark
+
+**Rules:**
+- Before any migration that contains `DELETE`, `DROP`, or column rebuild → run `pnpm db:backup` first
+- `time-travel restore` overwrites the live DB; capture the current bookmark via `pnpm db:tt-info` before restoring so you can roll forward again
+- After every successful restore wrangler prints "↩️ To undo this operation, you can restore to the previous bookmark: ..." — keep that string
+- Local `.wrangler/state/v3/d1/` is not backed up; seed-style data belongs in `seed.sql`

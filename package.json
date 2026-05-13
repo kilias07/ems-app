@@ -5,7 +5,10 @@
   "scripts": {
     "build-package": "pnpm --filter @repo/data-ops run build",
     "dev-frontend": "pnpm --filter user-application run dev",
-    "dev-data-service": "pnpm --filter data-service run dev"
+    "dev-data-service": "pnpm --filter data-service run dev",
+    "db:backup": "mkdir -p backups && wrangler d1 export DB --remote --output backups/$(date +%Y%m%d-%H%M%S).sql --config apps/user-application/wrangler.jsonc",
+    "db:tt-info": "wrangler d1 time-travel info DB --config apps/user-application/wrangler.jsonc",
+    "db:tt-restore": "wrangler d1 time-travel restore DB --config apps/user-application/wrangler.jsonc"
   },
   "keywords": [],
   "author": "",
