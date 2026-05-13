@@ -385,3 +385,12 @@ export async function deleteSession(sessionId: string) {
   const db = getDb();
   await db.delete(trainingSession).where(eq(trainingSession.id, sessionId));
 }
+
+export async function getEarliestSessionDate(): Promise<string | null> {
+  const db = getDb();
+  const rows = await db
+    .select({ earliest: sql<string | null>`min(${trainingSession.sessionDate})` })
+    .from(trainingSession)
+    .where(eq(trainingSession.status, "approved"));
+  return rows[0]?.earliest ?? null;
+}

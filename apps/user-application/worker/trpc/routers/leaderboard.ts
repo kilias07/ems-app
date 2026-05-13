@@ -4,10 +4,11 @@ import {
   getLeaderboard,
   getMemberRanks,
 } from "@repo/data-ops/queries/leaderboard";
+import { getEarliestSessionDate } from "@repo/data-ops/queries/sessions";
 import { getClubPlaceById } from "@repo/data-ops/queries/club-places";
 import { HOME_CLUB_ID, HOME_CLUB_NAME } from "@repo/data-ops/utils/suit-multipliers";
 
-const periodSchema = z.enum(["all", "monthly", "weekly"]);
+const periodSchema = z.enum(["all", "yearly", "monthly", "weekly"]);
 const scopeSchema = z.enum(["club", "city", "country"]);
 
 export const leaderboardRoutes = t.router({
@@ -20,6 +21,10 @@ export const leaderboardRoutes = t.router({
     const club = await getClubPlaceById(clubPlaceId);
     if (!club) return null;
     return { id: club.id, name: club.name, city: club.city };
+  }),
+
+  getEarliestSessionDate: t.procedure.query(async () => {
+    return getEarliestSessionDate();
   }),
 
   getLeaderboard: t.procedure

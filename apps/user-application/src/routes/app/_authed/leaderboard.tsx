@@ -1,8 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { trpc } from "@/router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -15,21 +22,109 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const MONTH_NAMES_PL = [
+  "Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
+  "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień",
+];
+
+const MONTH_GENITIVE_PL = [
+  "stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
+  "lipca", "sierpnia", "września", "października", "listopada", "grudnia",
+];
+
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function ymd(d: Date) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
 function getCurrentMonthKey() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+}
+
+function getCurrentYearKey() {
+  return String(new Date().getFullYear());
+}
+
+function mondayOf(d: Date): Date {
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(d.getFullYear(), d.getMonth(), diff);
+  return monday;
 }
 
 function getCurrentWeekKey() {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(d);
-  monday.setDate(diff);
-  return monday.toISOString().slice(0, 10);
+  return ymd(mondayOf(new Date()));
 }
 
-type Period = "all" | "monthly" | "weekly";
+function getMonthOptions(earliestDate: string, today: Date) {
+  const [ey, em] = earliestDate.split("-").map(Number);
+  const startY = ey;
+  const startM = em - 1;
+  const endY = today.getFullYear();
+  const endM = today.getMonth();
+  const options: { value: string; label: string }[] = [];
+  for (let y = endY; y >= startY; y--) {
+    const monthStart = y === endY ? endM : 11;
+    const monthEnd = y === startY ? startM : 0;
+    for (let m = monthStart; m >= monthEnd; m--) {
+      options.push({
+        value: `${y}-${pad2(m + 1)}`,
+        label: `${MONTH_NAMES_PL[m]} ${y}`,
+      });
+    }
+  }
+  return options;
+}
+
+function getYearOptions(earliestDate: string, today: Date) {
+  const startY = Number(earliestDate.slice(0, 4));
+  const endY = today.getFullYear();
+  const options: { value: string; label: string }[] = [];
+  for (let y = endY; y >= startY; y--) {
+    options.push({ value: String(y), label: String(y) });
+  }
+  return options;
+}
+
+function getWeekOptions(earliestDate: string, today: Date) {
+  const earliestMonday = mondayOf(new Date(earliestDate));
+  const currentMonday = mondayOf(today);
+  const options: { value: string; label: string }[] = [];
+  let cursor = new Date(currentMonday);
+  while (cursor >= earliestMonday) {
+    const sunday = new Date(cursor);
+    sunday.setDate(sunday.getDate() + 6);
+    const mDay = cursor.getDate();
+    const mMonthIdx = cursor.getMonth();
+    const sDay = sunday.getDate();
+    const sMonthIdx = sunday.getMonth();
+    const sYear = sunday.getFullYear();
+    let label: string;
+    if (mMonthIdx === sMonthIdx && cursor.getFullYear() === sYear) {
+      label = `${mDay}–${sDay} ${MONTH_GENITIVE_PL[mMonthIdx]} ${sYear}`;
+    } else if (cursor.getFullYear() === sYear) {
+      label = `${mDay} ${MONTH_GENITIVE_PL[mMonthIdx]} – ${sDay} ${MONTH_GENITIVE_PL[sMonthIdx]} ${sYear}`;
+    } else {
+      label = `${mDay} ${MONTH_GENITIVE_PL[mMonthIdx]} ${cursor.getFullYear()} – ${sDay} ${MONTH_GENITIVE_PL[sMonthIdx]} ${sYear}`;
+    }
+    options.push({ value: ymd(cursor), label });
+    cursor.setDate(cursor.getDate() - 7);
+  }
+  return options;
+}
+
+function defaultKeyForPeriod(period: Period): string | undefined {
+  if (period === "weekly") return getCurrentWeekKey();
+  if (period === "monthly") return getCurrentMonthKey();
+  if (period === "yearly") return getCurrentYearKey();
+  return undefined;
+}
+
+type Period = "all" | "yearly" | "monthly" | "weekly";
 type Scope = "club" | "city" | "country";
 
 function LeaderboardTable({
@@ -193,10 +288,18 @@ export const Route = createFileRoute("/app/_authed/leaderboard")({
   loader: async ({ context }) => {
     const monthKey = getCurrentMonthKey();
     const weekKey = getCurrentWeekKey();
+    const yearKey = getCurrentYearKey();
     await Promise.all([
       context.queryClient.prefetchQuery(
         context.trpc.leaderboard.getLeaderboard.queryOptions({
           period: "all",
+          scope: "country",
+        }),
+      ),
+      context.queryClient.prefetchQuery(
+        context.trpc.leaderboard.getLeaderboard.queryOptions({
+          period: "yearly",
+          periodKey: yearKey,
           scope: "country",
         }),
       ),
@@ -220,6 +323,9 @@ export const Route = createFileRoute("/app/_authed/leaderboard")({
       context.queryClient.prefetchQuery(
         context.trpc.leaderboard.getMyClubInfo.queryOptions(),
       ),
+      context.queryClient.prefetchQuery(
+        context.trpc.leaderboard.getEarliestSessionDate.queryOptions(),
+      ),
     ]);
   },
   component: LeaderboardPage,
@@ -227,6 +333,7 @@ export const Route = createFileRoute("/app/_authed/leaderboard")({
 
 function LeaderboardPage() {
   const [period, setPeriod] = useState<Period>("all");
+  const [periodKey, setPeriodKey] = useState<string | undefined>(undefined);
 
   const { data: profile } = useSuspenseQuery({
     ...trpc.profile.getMyProfile.queryOptions(),
@@ -238,6 +345,11 @@ function LeaderboardPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: earliestDate } = useSuspenseQuery({
+    ...trpc.leaderboard.getEarliestSessionDate.queryOptions(),
+    staleTime: 60 * 60 * 1000,
+  });
+
   const initialScope: Scope = !profile.clubPlaceId
     ? "country"
     : profile.clubPlaceId === "home"
@@ -245,12 +357,21 @@ function LeaderboardPage() {
       : "club";
   const [scope, setScope] = useState<Scope>(initialScope);
 
-  const periodKey =
-    period === "monthly"
-      ? getCurrentMonthKey()
-      : period === "weekly"
-        ? getCurrentWeekKey()
-        : undefined;
+  const today = useMemo(() => new Date(), []);
+  const lowerBound = earliestDate ?? ymd(today);
+
+  const periodOptions = useMemo(() => {
+    if (period === "weekly") return getWeekOptions(lowerBound, today);
+    if (period === "monthly") return getMonthOptions(lowerBound, today);
+    if (period === "yearly") return getYearOptions(lowerBound, today);
+    return [];
+  }, [period, lowerBound, today]);
+
+  const handlePeriodChange = (value: string) => {
+    const next = value as Period;
+    setPeriod(next);
+    setPeriodKey(defaultKeyForPeriod(next));
+  };
 
   const scopeKey =
     scope === "club"
@@ -262,6 +383,8 @@ function LeaderboardPage() {
   const noClub = !profile.clubPlaceId;
   const isHome = profile.clubPlaceId === "home";
   const noCity = !clubPlaces?.city;
+
+  const showPeriodSelect = period !== "all" && periodOptions.length > 0;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -280,13 +403,34 @@ function LeaderboardPage() {
           </TabsList>
         </Tabs>
 
-        <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <TabsList>
-            <TabsTrigger value="all">Wszystkie czasy</TabsTrigger>
-            <TabsTrigger value="monthly">Ten miesiąc</TabsTrigger>
-            <TabsTrigger value="weekly">Ten tydzień</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Tabs value={period} onValueChange={handlePeriodChange}>
+            <TabsList>
+              <TabsTrigger value="weekly">Tydzień</TabsTrigger>
+              <TabsTrigger value="monthly">Miesiąc</TabsTrigger>
+              <TabsTrigger value="yearly">Rok</TabsTrigger>
+              <TabsTrigger value="all">Wszystkie</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {showPeriodSelect && (
+            <Select
+              value={periodKey}
+              onValueChange={(v) => setPeriodKey(v)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {periodOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       </div>
 
       {noClub && scope !== "country" ? (

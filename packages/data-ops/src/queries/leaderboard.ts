@@ -3,11 +3,15 @@ import { getDb } from "../db/database";
 import { clubPlace, memberProfile, trainingSession } from "../db/ems-schema";
 import { HOME_CLUB_ID } from "../utils/suit-multipliers";
 
-export type LeaderboardPeriod = "all" | "monthly" | "weekly";
+export type LeaderboardPeriod = "all" | "yearly" | "monthly" | "weekly";
 export type LeaderboardScope = "club" | "city" | "country";
 
 function buildDateFilter(period: LeaderboardPeriod, periodKey?: string) {
   if (period === "all") return undefined;
+
+  if (period === "yearly" && periodKey) {
+    return sql`${trainingSession.sessionDate} LIKE ${periodKey + "%"}`;
+  }
 
   if (period === "monthly" && periodKey) {
     return sql`${trainingSession.sessionDate} LIKE ${periodKey + "%"}`;
