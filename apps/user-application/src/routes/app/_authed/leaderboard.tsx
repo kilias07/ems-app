@@ -404,15 +404,6 @@ function LeaderboardPage() {
         </Tabs>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Tabs value={period} onValueChange={handlePeriodChange}>
-            <TabsList>
-              <TabsTrigger value="weekly">Tydzień</TabsTrigger>
-              <TabsTrigger value="monthly">Miesiąc</TabsTrigger>
-              <TabsTrigger value="yearly">Rok</TabsTrigger>
-              <TabsTrigger value="all">Wszystkie</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
           {showPeriodSelect && (
             <Select
               value={periodKey}
@@ -430,6 +421,15 @@ function LeaderboardPage() {
               </SelectContent>
             </Select>
           )}
+
+          <Tabs value={period} onValueChange={handlePeriodChange}>
+            <TabsList>
+              <TabsTrigger value="weekly">Tydzień</TabsTrigger>
+              <TabsTrigger value="monthly">Miesiąc</TabsTrigger>
+              <TabsTrigger value="yearly">Rok</TabsTrigger>
+              <TabsTrigger value="all">Wszystkie</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
